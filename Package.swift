@@ -25,6 +25,7 @@ let package = Package(
                 "MenuBarController.swift",
                 "MiniPlayerPanelController.swift",
                 "MiniPlayerView.swift",
+                "PreviewFixtures.swift",
                 "ProgressiveGlass.swift",
                 "ShortcutRecorderView.swift",
                 "System",
@@ -35,7 +36,8 @@ let package = Package(
                 "Core/ReadingModels.swift",
                 "Core/TextSanitizer.swift",
                 "Core/HotKeyConfiguration.swift",
-                "Core/ReadingCoordinator.swift"
+                "Core/ReadingCoordinator.swift",
+                "Core/RuntimeEnvironment.swift"
             ]
         ),
         .testTarget(

@@ -1,3 +1,4 @@
+import AppKit
 import ApplicationServices
 
 @MainActor
@@ -13,5 +14,17 @@ final class AccessibilityPermissionController:
             kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String
         let options = [promptKey: true] as CFDictionary
         AXIsProcessTrustedWithOptions(options)
+
+        guard !isTrusted,
+              let settingsURL = URL(
+                  string: "x-apple.systempreferences:"
+                      + "com.apple.preference.security"
+                      + "?Privacy_Accessibility"
+              )
+        else {
+            return
+        }
+
+        NSWorkspace.shared.open(settingsURL)
     }
 }

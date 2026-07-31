@@ -41,13 +41,21 @@ struct ProgressiveGlassContainer<Content: View>: View {
     @ViewBuilder let content: () -> Content
 
     var body: some View {
-        if mode == .compatibility {
-            legacyContent
-        } else if #available(macOS 26.0, *) {
-            liquidGlassContent
-        } else {
-            legacyContent
+        Group {
+            if mode == .compatibility {
+                legacyContent
+            } else if #available(macOS 26.0, *) {
+                liquidGlassContent
+            } else {
+                legacyContent
+            }
         }
+        .clipShape(
+            RoundedRectangle(
+                cornerRadius: cornerRadius,
+                style: .continuous
+            )
+        )
     }
 
     private var legacyContent: some View {

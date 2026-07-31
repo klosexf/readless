@@ -7,11 +7,15 @@ struct MiniPlayerView: View {
 
     @State private var speed = "1.0×"
 
+    private var errorSurfaceShape: RoundedRectangle {
+        RoundedRectangle(cornerRadius: 18, style: .continuous)
+    }
+
     var body: some View {
         ProgressiveGlassContainer(
             mode: state.materialMode,
             role: .clear,
-            cornerRadius: 16
+            cornerRadius: 18
         ) {
             Group {
                 if let error = state.readingError {
@@ -20,10 +24,14 @@ struct MiniPlayerView: View {
                     playbackContent
                 }
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
+            .padding(.horizontal, state.readingError == nil ? 12 : 16)
+            .padding(.vertical, state.readingError == nil ? 10 : 12)
             .foregroundStyle(.white)
-            .background(Color.black.opacity(0.58))
+            .background {
+                errorSurfaceShape
+                    .fill(Color.black.opacity(0.56))
+            }
+            .clipShape(errorSurfaceShape)
         }
         .padding(1)
     }
@@ -118,12 +126,14 @@ struct MiniPlayerView: View {
     }
 
     private func errorContent(_ error: ReadingError) -> some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 14) {
             Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(.orange)
 
             Text(error.userMessage)
-                .font(.system(size: 9, weight: .medium))
+                .font(.system(size: 12, weight: .semibold))
+                .lineSpacing(2)
                 .lineLimit(2)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -133,6 +143,7 @@ struct MiniPlayerView: View {
                     "授权",
                     action: actions.requestAccessibility
                 )
+                .controlSize(.regular)
             case .focusedApplicationUnavailable,
                  .focusedElementUnavailable,
                  .selectedTextUnsupported,
@@ -153,10 +164,42 @@ struct MiniPlayerView: View {
 
             Button(action: actions.dismissError) {
                 Image(systemName: "xmark")
+                    .font(.system(size: 12, weight: .medium))
+                    .frame(width: 28, height: 28)
             }
             .buttonStyle(.plain)
             .accessibilityLabel("关闭提示")
         }
         .buttonStyle(.bordered)
+    }
+}
+
+struct MiniPlayerView_Previews: PreviewProvider {
+    static var previews: some View {
+        VStack(spacing: 20) {
+            MiniPlayerView(
+                state: PreviewFixtures.playingState(),
+                actions: PreviewFixtures.actions,
+                toggleExpanded: {}
+            )
+            .frame(width: 580, height: 52)
+
+            MiniPlayerView(
+                state: PreviewFixtures.playingState(expanded: true),
+                actions: PreviewFixtures.actions,
+                toggleExpanded: {}
+            )
+            .frame(width: 620, height: 126)
+
+            MiniPlayerView(
+                state: PreviewFixtures.errorState(),
+                actions: PreviewFixtures.actions,
+                toggleExpanded: {}
+            )
+            .frame(width: 580, height: 82)
+        }
+        .padding(24)
+        .frame(width: 680)
+        .previewDisplayName("播放器状态")
     }
 }

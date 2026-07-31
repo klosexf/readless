@@ -273,7 +273,7 @@ private struct CurrentPlaybackView: View {
             .foregroundStyle(.orange)
 
             Text(error.userMessage)
-                .font(.system(size: 10))
+                .font(.system(size: 12))
                 .foregroundStyle(.secondary)
 
             HStack {
@@ -294,7 +294,7 @@ private struct CurrentPlaybackView: View {
                     )
                 case .hotKeyConflict:
                     Text("请在下方录制新的快捷键。")
-                        .font(.system(size: 9))
+                        .font(.system(size: 11))
                         .foregroundStyle(.secondary)
                 case .speechUnavailable, .speechFailed:
                     EmptyView()
@@ -491,5 +491,16 @@ private extension ManagementSection {
         case .voiceService: "sparkles"
         case .recentReadings: "clock"
         }
+    }
+}
+
+struct MainWindowView_Previews: PreviewProvider {
+    static var previews: some View {
+        MainWindowView(
+            state: PreviewFixtures.playingState(),
+            actions: PreviewFixtures.actions
+        )
+        .frame(width: 620, height: 520)
+        .previewDisplayName("当前播放")
     }
 }

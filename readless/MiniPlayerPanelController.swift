@@ -71,7 +71,7 @@ final class MiniPlayerPanelController: NSWindowController {
         let size = NSSize(
             width: state.isMiniPlayerExpanded ? 620 : 580,
             height: isError
-                ? 72
+                ? 82
                 : (state.isMiniPlayerExpanded ? 126 : 52)
         )
         let visibleFrame = panel.screen?.visibleFrame

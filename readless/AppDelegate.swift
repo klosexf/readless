@@ -15,6 +15,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var cancellables = Set<AnyCancellable>()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        guard !RuntimeEnvironment.isRunningInXcodePreview else {
+            return
+        }
+
         NSApplication.shared.setActivationPolicy(.accessory)
 
         let permissionController =
