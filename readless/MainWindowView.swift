@@ -490,8 +490,8 @@ struct VoiceServiceEditor: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            LabeledContent("服务商") {
+        VStack(alignment: .leading, spacing: 8) {
+            serviceFormRow("服务商") {
                 Picker("服务商", selection: $provider) {
                     Text("豆包（火山引擎）").tag(VoiceProviderKind.doubao)
                     Text("OpenAI-compatible").tag(VoiceProviderKind.openAICompatible)
@@ -499,12 +499,10 @@ struct VoiceServiceEditor: View {
                     Text("阿里百炼 · 即将支持").tag(VoiceProviderKind.alibaba)
                 }
                 .labelsHidden()
-                .frame(width: 230)
             }
 
             if provider.isAvailable {
                 providerFields
-                credentialField
             } else {
                 Label("该服务商即将支持，当前不能保存。", systemImage: "clock")
                     .font(.system(size: 11))
@@ -518,13 +516,16 @@ struct VoiceServiceEditor: View {
                     .foregroundStyle(.orange)
             }
 
-            Text("不会经过 Readless 的服务器。发起朗读时，文字会直接发送给你配置的服务商；凭据不会显示或写入偏好设置。")
-                .font(.system(size: 9))
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(11)
-                .background(.green.opacity(0.07))
-                .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+            Label(
+                "不会经过 Readless 的服务器。发起朗读时，文字会直接发送给你配置的服务商；凭据不会显示或写入偏好设置。",
+                systemImage: "info.circle"
+            )
+            .font(.system(size: 10))
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(12)
+            .background(Color.accentColor.opacity(0.08))
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
 
             HStack {
                 if hasSavedCredential {
@@ -550,10 +551,12 @@ struct VoiceServiceEditor: View {
         switch provider {
         case .doubao:
             labeledField("App ID", text: $appID, prompt: "火山引擎 App ID")
+            credentialField
             labeledField("Cluster", text: $cluster, prompt: "例如 volcano_tts")
             labeledField("音色", text: $voiceType, prompt: "voice_type")
         case .openAICompatible:
             labeledField("Base URL", text: $baseURL, prompt: "https://example.com")
+            credentialField
             labeledField("模型", text: $model, prompt: "例如 tts-1")
             labeledField("音色", text: $voice, prompt: "例如 nova")
         case .openAI, .alibaba:
@@ -562,13 +565,12 @@ struct VoiceServiceEditor: View {
     }
 
     private var credentialField: some View {
-        LabeledContent(provider == .doubao ? "Access Token" : "API Key") {
+        serviceFormRow(provider == .doubao ? "Access Token" : "API Key") {
             SecureField(
                 hasSavedCredential ? "如需替换，请输入新的凭据" : "凭据保存在钥匙串",
                 text: $credential
             )
             .textFieldStyle(.roundedBorder)
-            .frame(width: 230)
         }
     }
 
@@ -577,11 +579,25 @@ struct VoiceServiceEditor: View {
         text: Binding<String>,
         prompt: String
     ) -> some View {
-        LabeledContent(title) {
+        serviceFormRow(title) {
             TextField(prompt, text: text)
                 .textFieldStyle(.roundedBorder)
-                .frame(width: 230)
         }
+    }
+
+    private func serviceFormRow<Content: View>(
+        _ title: String,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        HStack(alignment: .center, spacing: 12) {
+            Text(title)
+                .font(.system(size: 12, weight: .medium))
+                .frame(width: 92, alignment: .leading)
+
+            content()
+                .frame(maxWidth: .infinity)
+        }
+        .frame(maxWidth: .infinity)
     }
 
     private func save() {
