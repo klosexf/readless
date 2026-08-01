@@ -6,6 +6,7 @@ final class ReadingCoordinator {
     private let permission: AccessibilityPermissionChecking
     private let selectionReader: SelectionReading
     private let clipboardReader: ClipboardReading
+    private let voiceServiceReadiness: VoiceServiceReadinessChecking
     private let sanitizer: TextSanitizing
     private let speech: SpeechEngine
     private let scheduleAfter: (
@@ -21,6 +22,7 @@ final class ReadingCoordinator {
         permission: AccessibilityPermissionChecking,
         selectionReader: SelectionReading,
         clipboardReader: ClipboardReading,
+        voiceServiceReadiness: VoiceServiceReadinessChecking,
         sanitizer: TextSanitizing,
         speech: SpeechEngine,
         scheduleAfter: (
@@ -34,6 +36,7 @@ final class ReadingCoordinator {
         self.permission = permission
         self.selectionReader = selectionReader
         self.clipboardReader = clipboardReader
+        self.voiceServiceReadiness = voiceServiceReadiness
         self.sanitizer = sanitizer
         self.speech = speech
         self.scheduleAfter = scheduleAfter ?? { delay, action in
@@ -58,6 +61,11 @@ final class ReadingCoordinator {
     }
 
     func handleReadShortcut() {
+        guard voiceServiceReadiness.isReadyForSpeech else {
+            state.showOnboarding(at: .configuration)
+            return
+        }
+
         guard permission.isTrusted else {
             fail(.accessibilityPermissionRequired)
             permission.requestAccessPrompt()
@@ -193,6 +201,7 @@ final class ReadingCoordinator {
             sourceApplication: source,
             sentence: sentence
         )
+        state.advanceOnboarding(after: .practicePlaybackStarted)
     }
 
     private func didComplete(sessionID: SpeechSessionID) {

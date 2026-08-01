@@ -29,6 +29,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             permission: permissionController,
             selectionReader: AccessibilitySelectionReader(),
             clipboardReader: SystemClipboardReader(),
+            voiceServiceReadiness: AlwaysReadyVoiceServiceReadiness(),
             sanitizer: DefaultTextSanitizer(),
             speech: speechEngine
         )

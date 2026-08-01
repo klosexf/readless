@@ -8,12 +8,14 @@ final class ReadingCoordinatorTests: XCTestCase {
     private let selection = SelectionReaderFake()
     private let clipboard = ClipboardReaderFake()
     private let speech = SpeechEngineFake()
+    private let readiness = VoiceServiceReadinessFake()
     private var scheduledAction: (@MainActor () -> Void)?
     private lazy var coordinator = ReadingCoordinator(
         state: state,
         permission: permission,
         selectionReader: selection,
         clipboardReader: clipboard,
+        voiceServiceReadiness: readiness,
         sanitizer: DefaultTextSanitizer(),
         speech: speech,
         scheduleAfter: { [weak self] _, action in
@@ -32,6 +34,16 @@ final class ReadingCoordinatorTests: XCTestCase {
         )
         XCTAssertEqual(selection.readCount, 0)
         XCTAssertEqual(permission.promptCount, 1)
+    }
+
+    func testUnconfiguredShortcutShowsConfigurationWithoutReadingSelection() {
+        readiness.isReady = false
+
+        coordinator.handleReadShortcut()
+
+        XCTAssertEqual(selection.readCount, 0)
+        XCTAssertTrue(state.isOnboardingVisible)
+        XCTAssertEqual(state.onboardingStep, .configuration)
     }
 
     func testValidSelectionStartsSpeech() {
@@ -228,6 +240,16 @@ private final class PermissionFake:
 
     func requestAccessPrompt() {
         promptCount += 1
+    }
+}
+
+private final class VoiceServiceReadinessFake:
+    VoiceServiceReadinessChecking
+{
+    var isReady = true
+
+    var isReadyForSpeech: Bool {
+        isReady
     }
 }
 

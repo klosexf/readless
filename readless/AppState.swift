@@ -105,6 +105,8 @@ final class ReadlessAppState: ObservableObject {
     @Published var readingError: ReadingError?
     @Published var hotKeyDisplayName = "⌥R"
     @Published var hotKeyIsRecording = false
+    @Published var isOnboardingVisible = false
+    @Published var onboardingStep: OnboardingStep = .configuration
 
     var visibleCurrentSentence: String? {
         guard isMiniPlayerExpanded, showsCurrentSentence else {
@@ -178,6 +180,27 @@ final class ReadlessAppState: ObservableObject {
 
     func closeContextMenu() {
         isContextMenuVisible = false
+    }
+
+    func showOnboarding(at step: OnboardingStep = .configuration) {
+        onboardingStep = step
+        isOnboardingVisible = true
+    }
+
+    func advanceOnboarding(after event: OnboardingEvent) {
+        switch (onboardingStep, event) {
+        case (.configuration, .configurationSaved):
+            onboardingStep = .testSpeech
+        case (.testSpeech, .testSpeechSucceeded):
+            onboardingStep = .accessibility
+        case (.accessibility, .accessibilityGranted):
+            onboardingStep = .practice
+        case (.practice, .practicePlaybackStarted):
+            onboardingStep = .completed
+            isOnboardingVisible = false
+        default:
+            break
+        }
     }
 
     func beginPlayback(
