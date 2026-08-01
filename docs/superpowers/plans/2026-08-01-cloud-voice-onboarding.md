@@ -244,7 +244,7 @@ Build a `POST` to the normalized HTTPS base URL plus `/v1/audio/speech` with `Au
 
 - [ ] **Step 4: Implement the Doubao provider.**
 
-Use a fresh `URLSessionWebSocketTask` per synthesis against the official V3 one-way endpoint. Encode only the latest documented request envelope with a UUID request ID, configured App ID/cluster/voice type, MP3 encoding, and selected speed; decode only documented audio/error frames. Map authentication, quota, timeout, invalid-voice, and unknown protocol errors to the stable Core errors; retain neither token nor source text after each request.
+Use a fresh `URLSessionWebSocketTask` per synthesis against the official V1 one-way endpoint. Encode its documented binary request envelope with a UUID request ID, configured App ID/cluster/voice type, MP3 encoding, and selected speed; decode only documented audio/error frames. Map authentication, quota, timeout, invalid-voice, and unknown protocol errors to the stable Core errors; retain neither token nor source text after each request. Keep the codec confined to this provider so V3 can replace it without affecting other layers.
 
 - [ ] **Step 5: Implement `CloudSpeechEngine`.**
 

@@ -23,13 +23,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let permissionController =
             AccessibilityPermissionController()
-        let speechEngine = SystemSpeechEngine()
+        let voiceServiceSettings = VoiceServiceSettingsStore()
+        let credentialStore = KeychainCredentialStore()
+        let speechEngine = CloudSpeechEngine(
+            settings: voiceServiceSettings,
+            credentials: credentialStore
+        )
         let coordinator = ReadingCoordinator(
             state: state,
             permission: permissionController,
             selectionReader: AccessibilitySelectionReader(),
             clipboardReader: SystemClipboardReader(),
-            voiceServiceReadiness: AlwaysReadyVoiceServiceReadiness(),
+            voiceServiceReadiness: StoredVoiceServiceReadiness(
+                settings: voiceServiceSettings,
+                credentials: credentialStore
+            ),
             sanitizer: DefaultTextSanitizer(),
             speech: speechEngine
         )
