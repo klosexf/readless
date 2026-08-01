@@ -12,6 +12,12 @@ enum ReadingError: String, Error, Equatable, Sendable {
     case hotKeyConflict
     case speechUnavailable
     case speechFailed
+    case voiceServiceNotConfigured
+    case voiceServiceNetworkUnavailable
+    case voiceServiceCredentialInvalid
+    case voiceServiceQuotaExceeded
+    case voiceServiceTimedOut
+    case voiceServiceResponseInvalid
 }
 
 struct SelectionSnapshot: Equatable, Sendable {

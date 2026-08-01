@@ -34,6 +34,7 @@ let package = Package(
             sources: [
                 "AppState.swift",
                 "Core/ReadingModels.swift",
+                "Core/VoiceServiceModels.swift",
                 "Core/TextSanitizer.swift",
                 "Core/HotKeyConfiguration.swift",
                 "Core/ReadingCoordinator.swift",
