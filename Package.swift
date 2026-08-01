@@ -22,6 +22,8 @@ let package = Package(
                 "Item.swift",
                 "MainWindowController.swift",
                 "MainWindowView.swift",
+                "OnboardingWindowController.swift",
+                "OnboardingView.swift",
                 "MenuBarController.swift",
                 "MiniPlayerPanelController.swift",
                 "MiniPlayerView.swift",
@@ -34,6 +36,9 @@ let package = Package(
             sources: [
                 "AppState.swift",
                 "Core/ReadingModels.swift",
+                "Core/VoiceServiceModels.swift",
+                "Core/VoiceServiceStore.swift",
+                "Core/CloudSpeechRequests.swift",
                 "Core/TextSanitizer.swift",
                 "Core/HotKeyConfiguration.swift",
                 "Core/ReadingCoordinator.swift",

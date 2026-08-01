@@ -13,6 +13,17 @@ final class AppStateTests: XCTestCase {
         XCTAssertFalse(state.isMiniPlayerExpanded)
         XCTAssertTrue(state.showsCurrentSentence)
         XCTAssertEqual(state.materialMode, .automatic)
+        XCTAssertFalse(state.isOnboardingVisible)
+        XCTAssertEqual(state.onboardingStep, .configuration)
+    }
+
+    func testAccessibilityCannotAdvanceBeforeTestSpeechSuccess() {
+        let state = ReadlessAppState()
+
+        state.advanceOnboarding(after: .configurationSaved)
+        state.advanceOnboarding(after: .accessibilityGranted)
+
+        XCTAssertEqual(state.onboardingStep, .testSpeech)
     }
 
     func testLeftClickOpensManagementWindowAndClosesContextMenu() {

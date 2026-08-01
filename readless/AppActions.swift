@@ -8,4 +8,14 @@ struct ReadlessActions {
     let setRate: (Float) -> Void
     let seekPlayback: (Double) -> Void
     let openCurrentPlayback: () -> Void
+    let savedVoiceServiceConfiguration: () -> VoiceServiceConfiguration?
+    let hasVoiceServiceCredential: (VoiceProviderKind) -> Bool
+    let saveVoiceService: (
+        VoiceProviderKind,
+        VoiceServiceConfiguration,
+        String
+    ) -> VoiceServiceSaveError?
+    let readTestSpeech: () -> Void
+    let requestOnboardingAccessibility: () -> Void
+    let confirmOnboardingAccessibility: () -> Bool
 }

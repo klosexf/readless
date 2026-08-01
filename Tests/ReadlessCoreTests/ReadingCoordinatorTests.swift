@@ -8,12 +8,14 @@ final class ReadingCoordinatorTests: XCTestCase {
     private let selection = SelectionReaderFake()
     private let clipboard = ClipboardReaderFake()
     private let speech = SpeechEngineFake()
+    private let readiness = VoiceServiceReadinessFake()
     private var scheduledAction: (@MainActor () -> Void)?
     private lazy var coordinator = ReadingCoordinator(
         state: state,
         permission: permission,
         selectionReader: selection,
         clipboardReader: clipboard,
+        voiceServiceReadiness: readiness,
         sanitizer: DefaultTextSanitizer(),
         speech: speech,
         scheduleAfter: { [weak self] _, action in
@@ -32,6 +34,48 @@ final class ReadingCoordinatorTests: XCTestCase {
         )
         XCTAssertEqual(selection.readCount, 0)
         XCTAssertEqual(permission.promptCount, 1)
+    }
+
+    func testUnconfiguredShortcutShowsConfigurationWithoutReadingSelection() {
+        readiness.isReady = false
+
+        coordinator.handleReadShortcut()
+
+        XCTAssertEqual(selection.readCount, 0)
+        XCTAssertTrue(state.isOnboardingVisible)
+        XCTAssertEqual(state.onboardingStep, .configuration)
+    }
+
+    func testUnconfiguredClipboardReadShowsConfigurationWithoutReadingClipboard() {
+        readiness.isReady = false
+        clipboard.value = "不应读取"
+
+        coordinator.readClipboard()
+
+        XCTAssertEqual(clipboard.readCount, 0)
+        XCTAssertTrue(state.isOnboardingVisible)
+        XCTAssertEqual(state.onboardingStep, .configuration)
+    }
+
+    func testTestSpeechStartsBuiltInSentenceWithoutReadingSelection() {
+        state.showOnboarding(at: .testSpeech)
+
+        coordinator.readTestSpeech()
+
+        XCTAssertEqual(selection.readCount, 0)
+        XCTAssertEqual(speech.spokenTexts, ["你好，这是桌面听读助手的内置测试语音。"])
+        speech.start()
+        XCTAssertEqual(state.onboardingStep, .accessibility)
+    }
+
+    func testFailedTestSpeechStaysOnTestStep() {
+        state.showOnboarding(at: .testSpeech)
+
+        coordinator.readTestSpeech()
+        speech.fail(.voiceServiceCredentialInvalid)
+
+        XCTAssertEqual(state.onboardingStep, .testSpeech)
+        XCTAssertEqual(state.readingError, .voiceServiceCredentialInvalid)
     }
 
     func testValidSelectionStartsSpeech() {
@@ -231,6 +275,16 @@ private final class PermissionFake:
     }
 }
 
+private final class VoiceServiceReadinessFake:
+    VoiceServiceReadinessChecking
+{
+    var isReady = true
+
+    var isReadyForSpeech: Bool {
+        isReady
+    }
+}
+
 private final class SelectionReaderFake: SelectionReading {
     var result: Result<SelectionSnapshot, ReadingError> = .failure(
         .selectedTextUnsupported
@@ -305,5 +359,12 @@ private final class SpeechEngineFake: SpeechEngine {
         sessionID: SpeechSessionID? = nil
     ) {
         onProgress?(sessionID ?? spokenSessionIDs.last!, progress)
+    }
+
+    func fail(
+        _ error: ReadingError,
+        sessionID: SpeechSessionID? = nil
+    ) {
+        onFailed?(sessionID ?? spokenSessionIDs.last!, error)
     }
 }

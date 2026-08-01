@@ -7,8 +7,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var menuBarController: MenuBarController?
     private var mainWindowController: MainWindowController?
     private var miniPlayerPanelController: MiniPlayerPanelController?
+    private var onboardingWindowController: OnboardingWindowController?
     private var permissionController:
         AccessibilityPermissionController?
+    private var voiceServiceSettings: VoiceServiceSettingsStore?
+    private var credentialStore: KeychainCredentialStore?
     private var readingCoordinator: ReadingCoordinator?
     private var hotKeyController: GlobalHotKeyController?
     private var escapeKeyMonitor: EscapeKeyMonitor?
@@ -23,12 +26,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let permissionController =
             AccessibilityPermissionController()
-        let speechEngine = SystemSpeechEngine()
+        let voiceServiceSettings = VoiceServiceSettingsStore()
+        let credentialStore = KeychainCredentialStore()
+        let speechEngine = CloudSpeechEngine(
+            settings: voiceServiceSettings,
+            credentials: credentialStore
+        )
         let coordinator = ReadingCoordinator(
             state: state,
             permission: permissionController,
             selectionReader: AccessibilitySelectionReader(),
             clipboardReader: SystemClipboardReader(),
+            voiceServiceReadiness: StoredVoiceServiceReadiness(
+                settings: voiceServiceSettings,
+                credentials: credentialStore
+            ),
             sanitizer: DefaultTextSanitizer(),
             speech: speechEngine
         )
@@ -40,6 +52,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         self.permissionController = permissionController
+        self.voiceServiceSettings = voiceServiceSettings
+        self.credentialStore = credentialStore
         readingCoordinator = coordinator
         self.hotKeyController = hotKeyController
         self.escapeKeyMonitor = escapeKeyMonitor
@@ -71,6 +85,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             },
             openCurrentPlayback: { [weak self] in
                 self?.showMainWindow(section: .currentPlayback)
+            },
+            savedVoiceServiceConfiguration: {
+                voiceServiceSettings.configuration
+            },
+            hasVoiceServiceCredential: { provider in
+                credentialStore.hasCredential(for: provider)
+            },
+            saveVoiceService: { [weak self] provider, configuration, credential in
+                self?.saveVoiceService(
+                    provider: provider,
+                    configuration: configuration,
+                    credential: credential
+                ) ?? .persistenceFailed
+            },
+            readTestSpeech: {
+                coordinator.readTestSpeech()
+            },
+            requestOnboardingAccessibility: {
+                permissionController.requestAccessPrompt()
+            },
+            confirmOnboardingAccessibility: { [weak self] in
+                self?.confirmOnboardingAccessibility() ?? false
             }
         )
 
@@ -83,9 +119,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 state: state,
                 actions: actions
             )
+        let onboardingWindowController = OnboardingWindowController(
+            state: state,
+            actions: actions
+        )
 
         self.mainWindowController = mainWindowController
         self.miniPlayerPanelController = miniPlayerPanelController
+        self.onboardingWindowController = onboardingWindowController
         menuBarController = MenuBarController(
             state: state,
             showMainWindow: { [weak self] section in
@@ -97,7 +138,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         bindRuntimeSurfaces(
             miniPlayer: miniPlayerPanelController,
-            escapeMonitor: escapeKeyMonitor
+            escapeMonitor: escapeKeyMonitor,
+            onboarding: onboardingWindowController
         )
         registerSavedHotKey()
     }
@@ -148,9 +190,66 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    private func saveVoiceService(
+        provider: VoiceProviderKind,
+        configuration: VoiceServiceConfiguration,
+        credential: String
+    ) -> VoiceServiceSaveError? {
+        guard let voiceServiceSettings, let credentialStore else {
+            return .persistenceFailed
+        }
+
+        let newCredential = credential.trimmingCharacters(
+            in: .whitespacesAndNewlines
+        )
+        let existingCredential: String?
+        do {
+            existingCredential = try credentialStore.credential(for: provider)
+        } catch {
+            return .persistenceFailed
+        }
+        let credentialForValidation = newCredential.isEmpty
+            ? (existingCredential ?? "")
+            : newCredential
+        if let error = VoiceServiceConfigurationValidator.saveError(
+            for: provider,
+            configuration: configuration,
+            credential: credentialForValidation
+        ) {
+            return error
+        }
+
+        do {
+            if !newCredential.isEmpty {
+                try credentialStore.saveCredential(
+                    newCredential,
+                    for: provider
+                )
+            }
+            try voiceServiceSettings.save(configuration: configuration)
+        } catch {
+            return .persistenceFailed
+        }
+
+        if state.isOnboardingVisible,
+           state.onboardingStep == .configuration {
+            state.advanceOnboarding(after: .configurationSaved)
+        }
+        return nil
+    }
+
+    private func confirmOnboardingAccessibility() -> Bool {
+        guard let permissionController, permissionController.isTrusted else {
+            return false
+        }
+        state.advanceOnboarding(after: .accessibilityGranted)
+        return true
+    }
+
     private func bindRuntimeSurfaces(
         miniPlayer: MiniPlayerPanelController,
-        escapeMonitor: EscapeKeyMonitor
+        escapeMonitor: EscapeKeyMonitor,
+        onboarding: OnboardingWindowController
     ) {
         state.$isMiniPlayerVisible
             .removeDuplicates()
@@ -183,6 +282,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             .receive(on: RunLoop.main)
             .sink { _ in
                 miniPlayer.refreshLayout()
+            }
+            .store(in: &cancellables)
+
+        state.$isOnboardingVisible
+            .removeDuplicates()
+            .receive(on: RunLoop.main)
+            .sink { isVisible in
+                if isVisible {
+                    onboarding.show()
+                } else {
+                    onboarding.hide()
+                }
+            }
+            .store(in: &cancellables)
+
+        state.$onboardingStep
+            .removeDuplicates()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] step in
+                if step == .completed {
+                    self?.voiceServiceSettings?.setHasCompletedOnboarding(true)
+                }
             }
             .store(in: &cancellables)
     }

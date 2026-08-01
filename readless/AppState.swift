@@ -45,6 +45,18 @@ extension ReadingError {
             "⌥R 已被占用，请设置新的快捷键。"
         case .speechUnavailable, .speechFailed:
             "系统语音暂时无法朗读，请重试。"
+        case .voiceServiceNotConfigured:
+            "请先完成语音服务配置，再开始朗读。"
+        case .voiceServiceNetworkUnavailable:
+            "连不上语音服务，请检查网络后重试。"
+        case .voiceServiceCredentialInvalid:
+            "语音服务凭证无效，请检查设置。"
+        case .voiceServiceQuotaExceeded:
+            "语音服务额度已用尽，请在服务商控制台处理。"
+        case .voiceServiceTimedOut:
+            "语音服务响应超时，请重试。"
+        case .voiceServiceResponseInvalid:
+            "语音服务返回了无法播放的结果，请重试。"
         }
     }
 }
@@ -93,6 +105,8 @@ final class ReadlessAppState: ObservableObject {
     @Published var readingError: ReadingError?
     @Published var hotKeyDisplayName = "⌥R"
     @Published var hotKeyIsRecording = false
+    @Published var isOnboardingVisible = false
+    @Published var onboardingStep: OnboardingStep = .configuration
 
     var visibleCurrentSentence: String? {
         guard isMiniPlayerExpanded, showsCurrentSentence else {
@@ -166,6 +180,27 @@ final class ReadlessAppState: ObservableObject {
 
     func closeContextMenu() {
         isContextMenuVisible = false
+    }
+
+    func showOnboarding(at step: OnboardingStep = .configuration) {
+        onboardingStep = step
+        isOnboardingVisible = true
+    }
+
+    func advanceOnboarding(after event: OnboardingEvent) {
+        switch (onboardingStep, event) {
+        case (.configuration, .configurationSaved):
+            onboardingStep = .testSpeech
+        case (.testSpeech, .testSpeechSucceeded):
+            onboardingStep = .accessibility
+        case (.accessibility, .accessibilityGranted):
+            onboardingStep = .practice
+        case (.practice, .practicePlaybackStarted):
+            onboardingStep = .completed
+            isOnboardingVisible = false
+        default:
+            break
+        }
     }
 
     func beginPlayback(

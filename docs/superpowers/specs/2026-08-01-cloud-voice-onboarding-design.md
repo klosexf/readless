@@ -39,7 +39,7 @@ ReadingCoordinator → CloudSpeechEngine → SpeechProvider
 
 - `VoiceServiceConfiguration` 只含服务商种类、端点、模型、音色与非秘密标识；保存到 `UserDefaults`。
 - `KeychainCredentialStore` 以稳定 service/account 名称保存 API Key、Access Token；普通配置、错误信息、日志和测试 fixture 均不得包含秘密。
-- `SpeechProvider` 接收已清洗文本和短期凭证，在请求结束后丢弃凭证。豆包 provider 使用官方推荐的 V3 单向流式 TTS；兼容 provider 使用 `POST /v1/audio/speech`，请求体为 `input`、`model`、`voice`，并接收音频响应。
+- `SpeechProvider` 接收已清洗文本和短期凭证，在请求结束后丢弃凭证。首版豆包 provider 使用官方仍可用的 V1 单向流式 WebSocket，并与未来 V3 实现隔离；兼容 provider 使用 `POST /v1/audio/speech`，请求体为 `input`、`model`、`voice`，并接收音频响应。
 - `CloudSpeechEngine` 管理下载/流入的音频与本地播放回调，继续满足现有 `SpeechEngine` 的开始、进度、结束、失败、暂停、继续与停止合同。
 - OpenAI 与阿里 provider 类型只占位在 `SpeechProviderKind`，不创建请求实现，不允许保存或验证其配置。
 
@@ -74,6 +74,6 @@ ReadingCoordinator → CloudSpeechEngine → SpeechProvider
 
 ## 风险与回滚
 
-- 豆包实时 WebSocket 的帧协议可能随控制台资源与区域变化；实现把编码/解码限制在 provider 内，便于独立更新。
+- 豆包 V1 接口已标记为不推荐，且 V3 的公开帧规范在本次开发环境中不可解析；实现把编码/解码限制在 provider 内，便于独立升级到 V3。
 - 用户自建兼容端点对音频格式和错误 body 的支持不一致；首期只承诺 OpenAI Speech API 形状，不对任意非兼容实现作兼容保证。
 - 回滚时可撤销本功能提交；未配置用户继续使用原有系统语音路径，已写入的非敏感配置可忽略，Keychain 项不自动删除。

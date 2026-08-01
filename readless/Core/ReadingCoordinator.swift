@@ -6,6 +6,7 @@ final class ReadingCoordinator {
     private let permission: AccessibilityPermissionChecking
     private let selectionReader: SelectionReading
     private let clipboardReader: ClipboardReading
+    private let voiceServiceReadiness: VoiceServiceReadinessChecking
     private let sanitizer: TextSanitizing
     private let speech: SpeechEngine
     private let scheduleAfter: (
@@ -21,6 +22,7 @@ final class ReadingCoordinator {
         permission: AccessibilityPermissionChecking,
         selectionReader: SelectionReading,
         clipboardReader: ClipboardReading,
+        voiceServiceReadiness: VoiceServiceReadinessChecking,
         sanitizer: TextSanitizing,
         speech: SpeechEngine,
         scheduleAfter: (
@@ -34,6 +36,7 @@ final class ReadingCoordinator {
         self.permission = permission
         self.selectionReader = selectionReader
         self.clipboardReader = clipboardReader
+        self.voiceServiceReadiness = voiceServiceReadiness
         self.sanitizer = sanitizer
         self.speech = speech
         self.scheduleAfter = scheduleAfter ?? { delay, action in
@@ -58,6 +61,11 @@ final class ReadingCoordinator {
     }
 
     func handleReadShortcut() {
+        guard voiceServiceReadiness.isReadyForSpeech else {
+            state.showOnboarding(at: .configuration)
+            return
+        }
+
         guard permission.isTrusted else {
             fail(.accessibilityPermissionRequired)
             permission.requestAccessPrompt()
@@ -79,6 +87,11 @@ final class ReadingCoordinator {
     }
 
     func readClipboard() {
+        guard voiceServiceReadiness.isReadyForSpeech else {
+            state.showOnboarding(at: .configuration)
+            return
+        }
+
         guard let text = clipboardReader.readString() else {
             reportClipboardError(.clipboardEmpty)
             return
@@ -95,6 +108,25 @@ final class ReadingCoordinator {
             reportClipboardError(error)
         } catch {
             reportClipboardError(.speechFailed)
+        }
+    }
+
+    func readTestSpeech() {
+        guard voiceServiceReadiness.isReadyForSpeech else {
+            state.showOnboarding(at: .configuration)
+            return
+        }
+
+        do {
+            try start(
+                text: "你好，这是桌面听读助手的内置测试语音。",
+                sourceApplication: "语音服务测试",
+                fingerprint: nil
+            )
+        } catch let error as ReadingError {
+            fail(error)
+        } catch {
+            fail(.speechFailed)
         }
     }
 
@@ -193,6 +225,14 @@ final class ReadingCoordinator {
             sourceApplication: source,
             sentence: sentence
         )
+        switch state.onboardingStep {
+        case .testSpeech:
+            state.advanceOnboarding(after: .testSpeechSucceeded)
+        case .practice:
+            state.advanceOnboarding(after: .practicePlaybackStarted)
+        default:
+            break
+        }
     }
 
     private func didComplete(sessionID: SpeechSessionID) {

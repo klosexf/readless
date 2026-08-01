@@ -96,7 +96,7 @@ struct MainWindowView: View {
         case .currentPlayback:
             CurrentPlaybackView(state: state, actions: actions)
         case .voiceService:
-            VoiceServiceView()
+            VoiceServiceView(actions: actions)
         case .recentReadings:
             RecentReadingsView()
         }
@@ -317,7 +317,14 @@ private struct CurrentPlaybackView: View {
                     Text("请在下方录制新的快捷键。")
                         .font(.system(size: 11))
                         .foregroundStyle(.secondary)
-                case .speechUnavailable, .speechFailed:
+                case .speechUnavailable,
+                     .speechFailed,
+                     .voiceServiceNotConfigured,
+                     .voiceServiceNetworkUnavailable,
+                     .voiceServiceCredentialInvalid,
+                     .voiceServiceQuotaExceeded,
+                     .voiceServiceTimedOut,
+                     .voiceServiceResponseInvalid:
                     EmptyView()
                 }
 
@@ -432,81 +439,200 @@ private extension View {
 }
 
 private struct VoiceServiceView: View {
-    @State private var provider = "豆包（火山引擎）"
-    @State private var credential = ""
+    let actions: ReadlessActions
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             VStack(alignment: .leading, spacing: 5) {
                 Text("语音服务")
                     .font(.system(size: 25, weight: .semibold))
-                Text("字段随服务商自动变化。")
+                Text("仅豆包与 OpenAI-compatible 已接入；凭据只写入 macOS 钥匙串。")
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
             }
 
-            VStack(spacing: 14) {
-                LabeledContent("服务商") {
-                    Picker("", selection: $provider) {
-                        Text("OpenAI").tag("OpenAI")
-                        Text("豆包（火山引擎）").tag("豆包（火山引擎）")
-                        Text("阿里百炼").tag("阿里百炼")
-                        Text("OpenAI-compatible")
-                            .tag("OpenAI-compatible")
-                    }
-                    .labelsHidden()
-                    .frame(width: 220)
-                }
-
-                LabeledContent("Access Token") {
-                    SecureField("凭证保存在钥匙串", text: $credential)
-                        .textFieldStyle(.roundedBorder)
-                        .frame(width: 220)
-                }
-
-                LabeledContent("音色") {
-                    Picker("", selection: .constant("温和女声")) {
-                        Text("温和女声").tag("温和女声")
-                        Text("清朗男声").tag("清朗男声")
-                        Text("沉稳旁白").tag("沉稳旁白")
-                    }
-                    .labelsHidden()
-                    .frame(width: 220)
-                }
-
-                Text("不上传到本项目服务器；你选择朗读的文字会发送给你配置的语音服务商。凭证只保存在 macOS 钥匙串。")
-                    .font(.system(size: 9))
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(11)
-                    .background(.green.opacity(0.07))
-                    .clipShape(
-                        RoundedRectangle(
-                            cornerRadius: 9,
-                            style: .continuous
-                        )
+            VoiceServiceEditor(actions: actions)
+                .padding(18)
+                .background(Color.white.opacity(0.68))
+                .clipShape(
+                    RoundedRectangle(
+                        cornerRadius: 14,
+                        style: .continuous
                     )
-
-                HStack {
-                    Spacer()
-                    Button("播放内置测试句") {}
-                    Button("保存") {}
-                        .buttonStyle(.borderedProminent)
-                }
-            }
-            .padding(18)
-            .background(Color.white.opacity(0.68))
-            .clipShape(
-                RoundedRectangle(
-                    cornerRadius: 14,
-                    style: .continuous
                 )
-            )
 
             Spacer()
         }
         .padding(26)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+struct VoiceServiceEditor: View {
+    let actions: ReadlessActions
+    let showsTestButton: Bool
+
+    @State private var provider: VoiceProviderKind = .doubao
+    @State private var appID = ""
+    @State private var cluster = "volcano_tts"
+    @State private var voiceType = "zh_female_wanwanxiaohe_moon_bigtts"
+    @State private var baseURL = ""
+    @State private var model = ""
+    @State private var voice = ""
+    @State private var credential = ""
+    @State private var hasSavedCredential = false
+    @State private var error: VoiceServiceSaveError?
+    @State private var didLoad = false
+
+    init(actions: ReadlessActions, showsTestButton: Bool = true) {
+        self.actions = actions
+        self.showsTestButton = showsTestButton
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            LabeledContent("服务商") {
+                Picker("服务商", selection: $provider) {
+                    Text("豆包（火山引擎）").tag(VoiceProviderKind.doubao)
+                    Text("OpenAI-compatible").tag(VoiceProviderKind.openAICompatible)
+                    Text("OpenAI · 即将支持").tag(VoiceProviderKind.openAI)
+                    Text("阿里百炼 · 即将支持").tag(VoiceProviderKind.alibaba)
+                }
+                .labelsHidden()
+                .frame(width: 230)
+            }
+
+            if provider.isAvailable {
+                providerFields
+                credentialField
+            } else {
+                Label("该服务商即将支持，当前不能保存。", systemImage: "clock")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .padding(.vertical, 8)
+            }
+
+            if let error {
+                Label(error.userMessage, systemImage: "exclamationmark.triangle.fill")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.orange)
+            }
+
+            Text("不会经过 Readless 的服务器。发起朗读时，文字会直接发送给你配置的服务商；凭据不会显示或写入偏好设置。")
+                .font(.system(size: 9))
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(11)
+                .background(.green.opacity(0.07))
+                .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+
+            HStack {
+                if hasSavedCredential {
+                    Label("凭据已保存", systemImage: "checkmark.circle.fill")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(.green)
+                }
+                Spacer()
+                if showsTestButton {
+                    Button("播放内置测试句", action: actions.readTestSpeech)
+                        .disabled(!hasSavedCredential || !provider.isAvailable)
+                }
+                Button("保存", action: save)
+                    .buttonStyle(.borderedProminent)
+                    .disabled(!provider.isAvailable)
+            }
+        }
+        .onAppear(perform: loadSavedConfiguration)
+    }
+
+    @ViewBuilder
+    private var providerFields: some View {
+        switch provider {
+        case .doubao:
+            labeledField("App ID", text: $appID, prompt: "火山引擎 App ID")
+            labeledField("Cluster", text: $cluster, prompt: "例如 volcano_tts")
+            labeledField("音色", text: $voiceType, prompt: "voice_type")
+        case .openAICompatible:
+            labeledField("Base URL", text: $baseURL, prompt: "https://example.com")
+            labeledField("模型", text: $model, prompt: "例如 tts-1")
+            labeledField("音色", text: $voice, prompt: "例如 nova")
+        case .openAI, .alibaba:
+            EmptyView()
+        }
+    }
+
+    private var credentialField: some View {
+        LabeledContent(provider == .doubao ? "Access Token" : "API Key") {
+            SecureField(
+                hasSavedCredential ? "如需替换，请输入新的凭据" : "凭据保存在钥匙串",
+                text: $credential
+            )
+            .textFieldStyle(.roundedBorder)
+            .frame(width: 230)
+        }
+    }
+
+    private func labeledField(
+        _ title: String,
+        text: Binding<String>,
+        prompt: String
+    ) -> some View {
+        LabeledContent(title) {
+            TextField(prompt, text: text)
+                .textFieldStyle(.roundedBorder)
+                .frame(width: 230)
+        }
+    }
+
+    private func save() {
+        let configuration: VoiceServiceConfiguration
+        switch provider {
+        case .doubao:
+            configuration = .doubao(
+                appID: appID,
+                cluster: cluster,
+                voiceType: voiceType
+            )
+        case .openAICompatible:
+            configuration = .openAICompatible(
+                baseURL: baseURL,
+                model: model,
+                voice: voice
+            )
+        case .openAI, .alibaba:
+            error = .validation(.unavailable)
+            return
+        }
+
+        error = actions.saveVoiceService(provider, configuration, credential)
+        guard error == nil else {
+            return
+        }
+        credential = ""
+        hasSavedCredential = true
+    }
+
+    private func loadSavedConfiguration() {
+        guard !didLoad else {
+            return
+        }
+        didLoad = true
+        guard let configuration = actions.savedVoiceServiceConfiguration() else {
+            return
+        }
+
+        provider = configuration.provider
+        hasSavedCredential = actions.hasVoiceServiceCredential(provider)
+        switch configuration {
+        case let .doubao(savedAppID, savedCluster, savedVoiceType):
+            appID = savedAppID
+            cluster = savedCluster
+            voiceType = savedVoiceType
+        case let .openAICompatible(savedBaseURL, savedModel, savedVoice):
+            baseURL = savedBaseURL
+            model = savedModel
+            voice = savedVoice
+        }
     }
 }
 
