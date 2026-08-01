@@ -503,7 +503,6 @@ struct VoiceServiceEditor: View {
 
             if provider.isAvailable {
                 providerFields
-                credentialField
             } else {
                 Label("该服务商即将支持，当前不能保存。", systemImage: "clock")
                     .font(.system(size: 11))
@@ -552,10 +551,12 @@ struct VoiceServiceEditor: View {
         switch provider {
         case .doubao:
             labeledField("App ID", text: $appID, prompt: "火山引擎 App ID")
+            credentialField
             labeledField("Cluster", text: $cluster, prompt: "例如 volcano_tts")
             labeledField("音色", text: $voiceType, prompt: "voice_type")
         case .openAICompatible:
             labeledField("Base URL", text: $baseURL, prompt: "https://example.com")
+            credentialField
             labeledField("模型", text: $model, prompt: "例如 tts-1")
             labeledField("音色", text: $voice, prompt: "例如 nova")
         case .openAI, .alibaba:

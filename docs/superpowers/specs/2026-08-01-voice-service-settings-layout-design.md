@@ -41,5 +41,5 @@
 ## Verification
 
 - 2026-08-01：修改前与修改后均使用 `xcodebuild` 构建 Debug scheme，构建成功。
-- 2026-08-01：以提升权限运行 `xcrun swift test`，45 个 `ReadlessCoreTests` 全部通过。
+- 2026-08-01：以提升权限运行 `xcrun swift test`，47 个 `ReadlessCoreTests` 全部通过，其中新增 2 个布局回归测试覆盖凭据字段顺序和全宽控件约束。
 - 2026-08-01：自动化界面检查受阻。应用采用状态栏入口且启动后不显示窗口，当前 GUI 自动化接口无法唤起该状态栏菜单，因此未能截取豆包和 OpenAI-compatible 状态的实际窗口。需在本机通过状态栏菜单打开“语音服务”后，确认字段对齐、服务商切换、保存和试播按钮可见。
