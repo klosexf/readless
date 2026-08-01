@@ -177,7 +177,14 @@ struct MiniPlayerView: View {
                     "设置快捷键",
                     action: actions.openCurrentPlayback
                 )
-            case .speechUnavailable, .speechFailed:
+            case .speechUnavailable,
+                 .speechFailed,
+                 .voiceServiceNotConfigured,
+                 .voiceServiceNetworkUnavailable,
+                 .voiceServiceCredentialInvalid,
+                 .voiceServiceQuotaExceeded,
+                 .voiceServiceTimedOut,
+                 .voiceServiceResponseInvalid:
                 EmptyView()
             }
 

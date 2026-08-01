@@ -317,7 +317,14 @@ private struct CurrentPlaybackView: View {
                     Text("请在下方录制新的快捷键。")
                         .font(.system(size: 11))
                         .foregroundStyle(.secondary)
-                case .speechUnavailable, .speechFailed:
+                case .speechUnavailable,
+                     .speechFailed,
+                     .voiceServiceNotConfigured,
+                     .voiceServiceNetworkUnavailable,
+                     .voiceServiceCredentialInvalid,
+                     .voiceServiceQuotaExceeded,
+                     .voiceServiceTimedOut,
+                     .voiceServiceResponseInvalid:
                     EmptyView()
                 }
 
