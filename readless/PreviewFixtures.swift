@@ -12,7 +12,13 @@ enum PreviewFixtures {
             updateHotKey: { _ in },
             setRate: { _ in },
             seekPlayback: { _ in },
-            openCurrentPlayback: {}
+            openCurrentPlayback: {},
+            savedVoiceServiceConfiguration: { nil },
+            hasVoiceServiceCredential: { _ in false },
+            saveVoiceService: { _, _, _ in nil },
+            readTestSpeech: {},
+            requestOnboardingAccessibility: {},
+            confirmOnboardingAccessibility: { false }
         )
     }
 

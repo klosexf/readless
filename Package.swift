@@ -22,6 +22,8 @@ let package = Package(
                 "Item.swift",
                 "MainWindowController.swift",
                 "MainWindowView.swift",
+                "OnboardingWindowController.swift",
+                "OnboardingView.swift",
                 "MenuBarController.swift",
                 "MiniPlayerPanelController.swift",
                 "MiniPlayerView.swift",

@@ -68,7 +68,7 @@ final class DoubaoSpeechProvider: CloudAudioProviding {
             )
             task.send(.data(makePacket(payload: requestData))) { [weak self] error in
                 if let error {
-                    Task { @MainActor in
+                    Task { @MainActor [weak self] in
                         self?.finish(
                             .failure(
                                 (error as? URLError)?.code == .timedOut
@@ -79,7 +79,7 @@ final class DoubaoSpeechProvider: CloudAudioProviding {
                     }
                     return
                 }
-                Task { @MainActor in
+                Task { @MainActor [weak self] in
                     self?.receiveNext()
                 }
             }
@@ -97,7 +97,7 @@ final class DoubaoSpeechProvider: CloudAudioProviding {
 
     private func receiveNext() {
         task?.receive { [weak self] result in
-            Task { @MainActor in
+            Task { @MainActor [weak self] in
                 guard let self else { return }
                 switch result {
                 case let .success(.data(data)):

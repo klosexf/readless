@@ -46,6 +46,38 @@ final class ReadingCoordinatorTests: XCTestCase {
         XCTAssertEqual(state.onboardingStep, .configuration)
     }
 
+    func testUnconfiguredClipboardReadShowsConfigurationWithoutReadingClipboard() {
+        readiness.isReady = false
+        clipboard.value = "不应读取"
+
+        coordinator.readClipboard()
+
+        XCTAssertEqual(clipboard.readCount, 0)
+        XCTAssertTrue(state.isOnboardingVisible)
+        XCTAssertEqual(state.onboardingStep, .configuration)
+    }
+
+    func testTestSpeechStartsBuiltInSentenceWithoutReadingSelection() {
+        state.showOnboarding(at: .testSpeech)
+
+        coordinator.readTestSpeech()
+
+        XCTAssertEqual(selection.readCount, 0)
+        XCTAssertEqual(speech.spokenTexts, ["你好，这是桌面听读助手的内置测试语音。"])
+        speech.start()
+        XCTAssertEqual(state.onboardingStep, .accessibility)
+    }
+
+    func testFailedTestSpeechStaysOnTestStep() {
+        state.showOnboarding(at: .testSpeech)
+
+        coordinator.readTestSpeech()
+        speech.fail(.voiceServiceCredentialInvalid)
+
+        XCTAssertEqual(state.onboardingStep, .testSpeech)
+        XCTAssertEqual(state.readingError, .voiceServiceCredentialInvalid)
+    }
+
     func testValidSelectionStartsSpeech() {
         selection.result = .success(firstSnapshot)
 
@@ -327,5 +359,12 @@ private final class SpeechEngineFake: SpeechEngine {
         sessionID: SpeechSessionID? = nil
     ) {
         onProgress?(sessionID ?? spokenSessionIDs.last!, progress)
+    }
+
+    func fail(
+        _ error: ReadingError,
+        sessionID: SpeechSessionID? = nil
+    ) {
+        onFailed?(sessionID ?? spokenSessionIDs.last!, error)
     }
 }

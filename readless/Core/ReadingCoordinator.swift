@@ -87,6 +87,11 @@ final class ReadingCoordinator {
     }
 
     func readClipboard() {
+        guard voiceServiceReadiness.isReadyForSpeech else {
+            state.showOnboarding(at: .configuration)
+            return
+        }
+
         guard let text = clipboardReader.readString() else {
             reportClipboardError(.clipboardEmpty)
             return
@@ -103,6 +108,25 @@ final class ReadingCoordinator {
             reportClipboardError(error)
         } catch {
             reportClipboardError(.speechFailed)
+        }
+    }
+
+    func readTestSpeech() {
+        guard voiceServiceReadiness.isReadyForSpeech else {
+            state.showOnboarding(at: .configuration)
+            return
+        }
+
+        do {
+            try start(
+                text: "你好，这是桌面听读助手的内置测试语音。",
+                sourceApplication: "语音服务测试",
+                fingerprint: nil
+            )
+        } catch let error as ReadingError {
+            fail(error)
+        } catch {
+            fail(.speechFailed)
         }
     }
 
@@ -201,7 +225,14 @@ final class ReadingCoordinator {
             sourceApplication: source,
             sentence: sentence
         )
-        state.advanceOnboarding(after: .practicePlaybackStarted)
+        switch state.onboardingStep {
+        case .testSpeech:
+            state.advanceOnboarding(after: .testSpeechSucceeded)
+        case .practice:
+            state.advanceOnboarding(after: .practicePlaybackStarted)
+        default:
+            break
+        }
     }
 
     private func didComplete(sessionID: SpeechSessionID) {

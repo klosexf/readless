@@ -31,4 +31,18 @@ final class VoiceServiceModelsTests: XCTestCase {
         XCTAssertFalse(VoiceProviderKind.openAI.isAvailable)
         XCTAssertFalse(VoiceProviderKind.alibaba.isAvailable)
     }
+
+    func testUnavailableProviderCannotBeSaved() {
+        let error = VoiceServiceConfigurationValidator.saveError(
+            for: .openAI,
+            configuration: .openAICompatible(
+                baseURL: "https://tts.example",
+                model: "tts-1",
+                voice: "nova"
+            ),
+            credential: "test-api-key"
+        )
+
+        XCTAssertEqual(error, .validation(.unavailable))
+    }
 }

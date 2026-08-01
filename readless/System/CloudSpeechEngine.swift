@@ -130,14 +130,19 @@ final class CloudSpeechEngine: NSObject, SpeechEngine {
             withTimeInterval: 0.1,
             repeats: true
         ) { [weak self] _ in
-            guard let self,
-                  let player = self.player,
-                  let sessionID = self.activeSessionID,
-                  player.duration > 0
-            else {
-                return
+            Task { @MainActor [weak self] in
+                guard let self,
+                      let player = self.player,
+                      let sessionID = self.activeSessionID,
+                      player.duration > 0
+                else {
+                    return
+                }
+                self.onProgress?(
+                    sessionID,
+                    player.currentTime / player.duration
+                )
             }
-            self.onProgress?(sessionID, player.currentTime / player.duration)
         }
     }
 }
