@@ -6,6 +6,7 @@ struct MiniPlayerView: View {
     let toggleExpanded: () -> Void
 
     @State private var speed = "1.0×"
+    @State private var displayedProgress = 0.0
 
     private var errorSurfaceShape: RoundedRectangle {
         RoundedRectangle(cornerRadius: 18, style: .continuous)
@@ -34,6 +35,9 @@ struct MiniPlayerView: View {
             .clipShape(errorSurfaceShape)
         }
         .padding(1)
+        .onChange(of: state.progress) {
+            displayedProgress = state.progress
+        }
     }
 
     private var playbackContent: some View {
@@ -68,9 +72,24 @@ struct MiniPlayerView: View {
                             .font(.system(size: 8))
                             .foregroundStyle(.secondary)
                     }
-                    ProgressView(value: state.progress)
-                        .progressViewStyle(.linear)
+                    Slider(
+                        value: $displayedProgress,
+                        in: 0...1,
+                        onEditingChanged: { isEditing in
+                            if !isEditing {
+                                actions.seekPlayback(displayedProgress)
+                            }
+                        }
+                    )
                         .tint(.white)
+                        .disabled(
+                            state.playbackState != .playing
+                                && state.playbackState != .completed
+                        )
+                        .accessibilityLabel("朗读进度")
+                        .accessibilityValue(
+                            "\(Int(displayedProgress * 100))%"
+                        )
                 }
 
                 Picker("", selection: $speed) {

@@ -66,6 +66,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             setRate: {
                 coordinator.setRate($0)
             },
+            seekPlayback: {
+                coordinator.seek(to: $0)
+            },
             openCurrentPlayback: { [weak self] in
                 self?.showMainWindow(section: .currentPlayback)
             }

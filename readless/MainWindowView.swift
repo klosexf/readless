@@ -214,13 +214,6 @@ private struct CurrentPlaybackView: View {
                 if state.playbackState == .preparing {
                     ProgressView()
                         .controlSize(.small)
-                } else if state.playbackState == .playing
-                            || state.playbackState == .paused {
-                    Button(
-                        state.playbackState == .paused ? "继续" : "暂停",
-                        action: actions.togglePlayback
-                    )
-                    .buttonStyle(.bordered)
                 }
             }
 
@@ -244,18 +237,46 @@ private struct CurrentPlaybackView: View {
                     )
             }
 
-            HStack {
-                Button(
-                    "停止",
-                    role: .destructive,
-                    action: actions.stopPlayback
-                )
-                Spacer()
+            HStack(spacing: 14) {
+                HStack(spacing: 8) {
+                    Button(action: actions.togglePlayback) {
+                        PlaybackControlButton(tone: .graphite) {
+                            if state.playbackState == .paused {
+                                PlaybackPlayGlyph()
+                            } else {
+                                PlaybackPauseGlyph()
+                            }
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .help(
+                        state.playbackState == .paused
+                            ? "继续朗读"
+                            : "暂停朗读"
+                    )
+                    .accessibilityLabel(
+                        state.playbackState == .paused
+                            ? "继续朗读"
+                            : "暂停朗读"
+                    )
+
+                    Button(action: actions.stopPlayback) {
+                        PlaybackControlButton(tone: .stop) {
+                            PlaybackStopGlyph()
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .help("停止朗读")
+                    .accessibilityLabel("停止朗读")
+                }
+
+                Spacer(minLength: 20)
+
                 Toggle(
                     "显示当前朗读句子",
                     isOn: $state.showsCurrentSentence
                 )
-                .font(.system(size: 10, weight: .medium))
+                .font(.system(size: 12, weight: .semibold))
                 .toggleStyle(.switch)
             }
         }
@@ -322,6 +343,79 @@ private struct CurrentPlaybackView: View {
         case .idle:
             .secondary
         }
+    }
+}
+
+private struct PlaybackControlButton<Glyph: View>: View {
+    enum Tone {
+        case graphite
+        case stop
+    }
+
+    let tone: Tone
+    @ViewBuilder let glyph: () -> Glyph
+
+    var body: some View {
+        glyph()
+            .foregroundStyle(foregroundColor)
+            .frame(width: 30, height: 30)
+            .background(backgroundColor)
+            .clipShape(Circle())
+    }
+
+    private var foregroundColor: Color {
+        switch tone {
+        case .graphite:
+            Color.primary.opacity(0.82)
+        case .stop:
+            .red
+        }
+    }
+
+    private var backgroundColor: Color {
+        switch tone {
+        case .graphite:
+            Color.primary.opacity(0.08)
+        case .stop:
+            Color.red.opacity(0.1)
+        }
+    }
+}
+
+private struct PlaybackPauseGlyph: View {
+    var body: some View {
+        HStack(spacing: 3.5) {
+            Capsule()
+                .frame(width: 3.5, height: 14)
+            Capsule()
+                .frame(width: 3.5, height: 14)
+        }
+    }
+}
+
+private struct PlaybackPlayGlyph: View {
+    var body: some View {
+        Triangle()
+            .frame(width: 12, height: 14)
+            .offset(x: 1)
+    }
+}
+
+private struct PlaybackStopGlyph: View {
+    var body: some View {
+        RoundedRectangle(cornerRadius: 3, style: .continuous)
+            .frame(width: 13, height: 13)
+    }
+}
+
+private struct Triangle: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.minX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.midY))
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
+        path.closeSubpath()
+        return path
     }
 }
 

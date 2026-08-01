@@ -13,6 +13,8 @@ final class ReadingCoordinator {
         @escaping @MainActor () -> Void
     ) -> Void
     private var lastFingerprint: SelectionFingerprint?
+    private var completionGeneration = 0
+    private var activeSpeechSessionID: SpeechSessionID = 0
 
     init(
         state: ReadlessAppState,
@@ -41,14 +43,17 @@ final class ReadingCoordinator {
             }
         }
 
-        speech.onStarted = { [weak self] in
-            self?.didStart()
+        speech.onStarted = { [weak self] sessionID in
+            self?.didStart(sessionID: sessionID)
         }
-        speech.onCompleted = { [weak self] in
-            self?.didComplete()
+        speech.onCompleted = { [weak self] sessionID in
+            self?.didComplete(sessionID: sessionID)
         }
-        speech.onFailed = { [weak self] error in
-            self?.fail(error)
+        speech.onFailed = { [weak self] sessionID, error in
+            self?.fail(error, sessionID: sessionID)
+        }
+        speech.onProgress = { [weak self] sessionID, progress in
+            self?.updateProgress(progress, sessionID: sessionID)
         }
     }
 
@@ -110,8 +115,23 @@ final class ReadingCoordinator {
         speech.setRate(rate)
     }
 
+    func seek(to progress: Double) {
+        switch state.playbackState {
+        case .playing:
+            state.updateProgress(progress)
+        case .completed:
+            completionGeneration += 1
+            state.restartCompletedPlayback(at: progress)
+        default:
+            return
+        }
+        speech.seek(to: progress)
+    }
+
     func stop() {
         speech.stop()
+        activeSpeechSessionID += 1
+        completionGeneration += 1
         lastFingerprint = nil
         state.stopPlayback()
     }
@@ -148,15 +168,20 @@ final class ReadingCoordinator {
         if state.playbackState != .idle {
             speech.stop()
         }
+        activeSpeechSessionID += 1
+        completionGeneration += 1
         lastFingerprint = fingerprint
         state.preparePlayback(
             sourceApplication: sourceApplication,
             sentence: text
         )
-        try speech.speak(text)
+        try speech.speak(text, sessionID: activeSpeechSessionID)
     }
 
-    private func didStart() {
+    private func didStart(sessionID: SpeechSessionID) {
+        guard sessionID == activeSpeechSessionID else {
+            return
+        }
         guard
             let source = state.sourceApplication,
             let sentence = state.currentSentence
@@ -170,15 +195,39 @@ final class ReadingCoordinator {
         )
     }
 
-    private func didComplete() {
+    private func didComplete(sessionID: SpeechSessionID) {
+        guard sessionID == activeSpeechSessionID else {
+            return
+        }
         state.completePlayback()
+        completionGeneration += 1
+        let generation = completionGeneration
         scheduleAfter(3) { [weak self] in
-            self?.lastFingerprint = nil
-            self?.state.stopPlayback()
+            guard let self, self.completionGeneration == generation else {
+                return
+            }
+            self.lastFingerprint = nil
+            self.state.stopPlayback()
         }
     }
 
-    private func fail(_ error: ReadingError) {
+    private func updateProgress(
+        _ progress: Double,
+        sessionID: SpeechSessionID
+    ) {
+        guard sessionID == activeSpeechSessionID else {
+            return
+        }
+        state.updateProgress(progress)
+    }
+
+    private func fail(
+        _ error: ReadingError,
+        sessionID: SpeechSessionID? = nil
+    ) {
+        if let sessionID, sessionID != activeSpeechSessionID {
+            return
+        }
         state.showFailure(error)
     }
 

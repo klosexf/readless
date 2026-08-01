@@ -11,6 +11,7 @@ enum PreviewFixtures {
             dismissError: {},
             updateHotKey: { _ in },
             setRate: { _ in },
+            seekPlayback: { _ in },
             openCurrentPlayback: {}
         )
     }

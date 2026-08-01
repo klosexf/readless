@@ -1,5 +1,7 @@
 import Foundation
 
+typealias SpeechSessionID = Int
+
 enum ReadingError: String, Error, Equatable, Sendable {
     case accessibilityPermissionRequired
     case focusedApplicationUnavailable
@@ -47,13 +49,15 @@ protocol TextSanitizing {
 
 @MainActor
 protocol SpeechEngine: AnyObject {
-    var onStarted: (() -> Void)? { get set }
-    var onCompleted: (() -> Void)? { get set }
-    var onFailed: ((ReadingError) -> Void)? { get set }
+    var onStarted: ((SpeechSessionID) -> Void)? { get set }
+    var onCompleted: ((SpeechSessionID) -> Void)? { get set }
+    var onFailed: ((SpeechSessionID, ReadingError) -> Void)? { get set }
+    var onProgress: ((SpeechSessionID, Double) -> Void)? { get set }
 
-    func speak(_ text: String) throws
+    func speak(_ text: String, sessionID: SpeechSessionID) throws
     func pause()
     func resume()
     func stop()
+    func seek(to progress: Double)
     func setRate(_ rate: Float)
 }

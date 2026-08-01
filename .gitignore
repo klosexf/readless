@@ -4,3 +4,7 @@ DerivedData/
 xcuserdata/
 .DS_Store
 *.swp
+
+# Agent guide and progress notes are local-only; do not upload to GitHub.
+AGENTS.md
+progress.md

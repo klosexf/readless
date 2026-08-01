@@ -221,6 +221,22 @@ final class ReadlessAppState: ObservableObject {
         isMiniPlayerVisible = true
     }
 
+    func restartCompletedPlayback(at progress: Double) {
+        guard playbackState == .completed else {
+            return
+        }
+        playbackState = .playing
+        self.progress = min(max(progress, 0), 1)
+        isMiniPlayerVisible = true
+    }
+
+    func updateProgress(_ progress: Double) {
+        guard playbackState == .playing || playbackState == .paused else {
+            return
+        }
+        self.progress = min(max(progress, 0), 1)
+    }
+
     func togglePlayback() {
         switch playbackState {
         case .playing:

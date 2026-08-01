@@ -6,5 +6,6 @@ struct ReadlessActions {
     let dismissError: () -> Void
     let updateHotKey: (HotKeyConfiguration) -> Void
     let setRate: (Float) -> Void
+    let seekPlayback: (Double) -> Void
     let openCurrentPlayback: () -> Void
 }

@@ -63,6 +63,43 @@ final class ReadingCoordinatorTests: XCTestCase {
         XCTAssertEqual(state.playbackState, .playing)
     }
 
+    func testSpeechProgressUpdatesPlayerWhilePlaying() {
+        selection.result = .success(firstSnapshot)
+        coordinator.handleReadShortcut()
+        speech.start()
+
+        speech.emitProgress(0.42)
+
+        XCTAssertEqual(state.progress, 0.42)
+    }
+
+    func testSeekingUpdatesPlayerAndSpeechEngineWhilePlaying() {
+        selection.result = .success(firstSnapshot)
+        coordinator.handleReadShortcut()
+        speech.start()
+
+        coordinator.seek(to: 0.65)
+
+        XCTAssertEqual(state.progress, 0.65)
+        XCTAssertEqual(speech.seekProgresses, [0.65])
+    }
+
+    func testSeekingAfterCompletionRestartsPlaybackFromNewPosition() {
+        selection.result = .success(firstSnapshot)
+        coordinator.handleReadShortcut()
+        speech.start()
+        speech.complete()
+
+        coordinator.seek(to: 0.25)
+
+        XCTAssertEqual(state.playbackState, .playing)
+        XCTAssertEqual(state.progress, 0.25)
+        XCTAssertEqual(speech.seekProgresses, [0.25])
+
+        scheduledAction?()
+        XCTAssertEqual(state.playbackState, .playing)
+    }
+
     func testNewSelectionReplacesSpeech() {
         selection.result = .success(firstSnapshot)
         coordinator.handleReadShortcut()
@@ -74,6 +111,21 @@ final class ReadingCoordinatorTests: XCTestCase {
         XCTAssertEqual(speech.stopCount, 1)
         XCTAssertEqual(speech.spokenTexts.last, "第二段")
         XCTAssertEqual(state.playbackState, .preparing)
+    }
+
+    func testLateCompletionFromReplacedSelectionDoesNotCompleteActivePlayback() throws {
+        selection.result = .success(firstSnapshot)
+        coordinator.handleReadShortcut()
+        speech.start()
+        let firstSessionID = try XCTUnwrap(speech.spokenSessionIDs.last)
+        selection.result = .success(secondSnapshot)
+        coordinator.handleReadShortcut()
+        speech.start()
+
+        speech.complete(sessionID: firstSessionID)
+
+        XCTAssertEqual(state.playbackState, .playing)
+        XCTAssertEqual(state.progress, 0)
     }
 
     func testSelectionFailureNeverReadsClipboard() {
@@ -202,18 +254,22 @@ private final class ClipboardReaderFake: ClipboardReading {
 }
 
 private final class SpeechEngineFake: SpeechEngine {
-    var onStarted: (() -> Void)?
-    var onCompleted: (() -> Void)?
-    var onFailed: ((ReadingError) -> Void)?
+    var onStarted: ((SpeechSessionID) -> Void)?
+    var onCompleted: ((SpeechSessionID) -> Void)?
+    var onFailed: ((SpeechSessionID, ReadingError) -> Void)?
+    var onProgress: ((SpeechSessionID, Double) -> Void)?
 
     private(set) var spokenTexts: [String] = []
+    private(set) var spokenSessionIDs: [SpeechSessionID] = []
     private(set) var pauseCount = 0
     private(set) var resumeCount = 0
     private(set) var stopCount = 0
     private(set) var rates: [Float] = []
+    private(set) var seekProgresses: [Double] = []
 
-    func speak(_ text: String) throws {
+    func speak(_ text: String, sessionID: SpeechSessionID) throws {
         spokenTexts.append(text)
+        spokenSessionIDs.append(sessionID)
     }
 
     func pause() {
@@ -228,15 +284,26 @@ private final class SpeechEngineFake: SpeechEngine {
         stopCount += 1
     }
 
+    func seek(to progress: Double) {
+        seekProgresses.append(progress)
+    }
+
     func setRate(_ rate: Float) {
         rates.append(rate)
     }
 
-    func start() {
-        onStarted?()
+    func start(sessionID: SpeechSessionID? = nil) {
+        onStarted?(sessionID ?? spokenSessionIDs.last!)
     }
 
-    func complete() {
-        onCompleted?()
+    func complete(sessionID: SpeechSessionID? = nil) {
+        onCompleted?(sessionID ?? spokenSessionIDs.last!)
+    }
+
+    func emitProgress(
+        _ progress: Double,
+        sessionID: SpeechSessionID? = nil
+    ) {
+        onProgress?(sessionID ?? spokenSessionIDs.last!, progress)
     }
 }
