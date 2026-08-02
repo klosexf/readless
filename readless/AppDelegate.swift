@@ -14,6 +14,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var credentialStore: KeychainCredentialStore?
     private var readingCoordinator: ReadingCoordinator?
     private var hotKeyController: GlobalHotKeyController?
+    private var clipboardHotKeyController: GlobalHotKeyController?
     private var escapeKeyMonitor: EscapeKeyMonitor?
     private var cancellables = Set<AnyCancellable>()
 
@@ -44,8 +45,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             sanitizer: DefaultTextSanitizer(),
             speech: speechEngine
         )
-        let hotKeyController = GlobalHotKeyController {
+        let hotKeyController = GlobalHotKeyController(identifier: 1) {
             coordinator.handleReadShortcut()
+        }
+        let clipboardHotKeyController = GlobalHotKeyController(identifier: 2) {
+            coordinator.readClipboard()
         }
         let escapeKeyMonitor = EscapeKeyMonitor {
             coordinator.stop()
@@ -56,6 +60,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.credentialStore = credentialStore
         readingCoordinator = coordinator
         self.hotKeyController = hotKeyController
+        self.clipboardHotKeyController = clipboardHotKeyController
         self.escapeKeyMonitor = escapeKeyMonitor
 
         let actions = ReadlessActions(
@@ -76,6 +81,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             },
             updateHotKey: { [weak self] configuration in
                 self?.updateHotKey(configuration)
+            },
+            updateClipboardHotKey: { [weak self] configuration in
+                self?.updateClipboardHotKey(configuration)
             },
             setRate: {
                 coordinator.setRate($0)
@@ -141,7 +149,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             escapeMonitor: escapeKeyMonitor,
             onboarding: onboardingWindowController
         )
-        registerSavedHotKey()
+        registerSavedHotKeys()
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(
@@ -155,11 +163,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         mainWindowController?.show()
     }
 
-    private func registerSavedHotKey() {
+    private func registerSavedHotKeys() {
         let configuration = hotKeyStore.load()
         state.hotKeyDisplayName = configuration.displayName
         if case .failure(let error) =
             hotKeyController?.register(configuration) {
+            state.showFailure(error)
+        }
+
+        let clipboardConfiguration = hotKeyStore.loadClipboard()
+        state.clipboardHotKeyDisplayName = clipboardConfiguration.displayName
+        if case .failure(let error) =
+            clipboardHotKeyController?.register(clipboardConfiguration) {
             state.showFailure(error)
         }
     }
@@ -181,6 +196,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         case .failure:
             _ = hotKeyController.register(previous)
             state.hotKeyDisplayName = previous.displayName
+            switch state.playbackState {
+            case .preparing, .playing, .paused:
+                state.showNonInterruptingError(.hotKeyConflict)
+            default:
+                state.showFailure(.hotKeyConflict)
+            }
+        }
+    }
+
+    private func updateClipboardHotKey(
+        _ candidate: HotKeyConfiguration
+    ) {
+        guard let clipboardHotKeyController else {
+            return
+        }
+        let previous = hotKeyStore.loadClipboard()
+        switch clipboardHotKeyController.register(candidate) {
+        case .success:
+            hotKeyStore.saveClipboard(candidate)
+            state.clipboardHotKeyDisplayName = candidate.displayName
+            if state.readingError == .hotKeyConflict {
+                state.dismissReadingError()
+            }
+        case .failure:
+            _ = clipboardHotKeyController.register(previous)
+            state.clipboardHotKeyDisplayName = previous.displayName
             switch state.playbackState {
             case .preparing, .playing, .paused:
                 state.showNonInterruptingError(.hotKeyConflict)

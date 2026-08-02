@@ -10,6 +10,7 @@ enum PreviewFixtures {
             requestAccessibility: {},
             dismissError: {},
             updateHotKey: { _ in },
+            updateClipboardHotKey: { _ in },
             setRate: { _ in },
             seekPlayback: { _ in },
             openCurrentPlayback: {},

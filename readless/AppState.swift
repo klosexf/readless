@@ -104,6 +104,7 @@ final class ReadlessAppState: ObservableObject {
     @Published var materialMode: MaterialMode = .automatic
     @Published var readingError: ReadingError?
     @Published var hotKeyDisplayName = "⌥R"
+    @Published var clipboardHotKeyDisplayName = "⌥⇧R"
     @Published var hotKeyIsRecording = false
     @Published var isOnboardingVisible = false
     @Published var onboardingStep: OnboardingStep = .configuration
