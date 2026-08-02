@@ -42,7 +42,7 @@ extension ReadingError {
         case .clipboardEmpty:
             "剪贴板里没有可朗读文字。"
         case .hotKeyConflict:
-            "⌥R 已被占用，请设置新的快捷键。"
+            "快捷键已被占用，请设置新的快捷键。"
         case .speechUnavailable, .speechFailed:
             "系统语音暂时无法朗读，请重试。"
         case .voiceServiceNotConfigured:

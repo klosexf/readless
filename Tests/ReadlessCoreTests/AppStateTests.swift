@@ -158,7 +158,7 @@ final class AppStateTests: XCTestCase {
         XCTAssertEqual(PlaybackState.paused.displayName, "已暂停")
         XCTAssertEqual(
             ReadingError.hotKeyConflict.userMessage,
-            "⌥R 已被占用，请设置新的快捷键。"
+            "快捷键已被占用，请设置新的快捷键。"
         )
     }
 }
