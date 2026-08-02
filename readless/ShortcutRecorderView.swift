@@ -2,6 +2,7 @@ import AppKit
 import SwiftUI
 
 struct ShortcutRecorderView: View {
+    let title: String
     let displayName: String
     let onRecorded: (HotKeyConfiguration) -> Void
     let onRestoreDefault: () -> Void
@@ -10,7 +11,7 @@ struct ShortcutRecorderView: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            Text("触发快捷键")
+            Text(title)
                 .font(.system(size: 10, weight: .medium))
 
             Spacer()
@@ -32,7 +33,7 @@ struct ShortcutRecorderView: View {
             }
             .buttonStyle(.bordered)
 
-            Button("恢复 ⌥R") {
+            Button("恢复默认") {
                 isRecording = false
                 onRestoreDefault()
             }

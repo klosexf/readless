@@ -139,6 +139,7 @@ private struct CurrentPlaybackView: View {
 
             VStack(spacing: 12) {
                 ShortcutRecorderView(
+                    title: "选区朗读快捷键",
                     displayName: state.hotKeyDisplayName,
                     onRecorded: actions.updateHotKey,
                     onRestoreDefault: {
@@ -146,7 +147,18 @@ private struct CurrentPlaybackView: View {
                     }
                 )
 
-                Text("若快捷键与输入法或常用应用冲突，可以在这里重新录制。")
+                ShortcutRecorderView(
+                    title: "剪贴板朗读快捷键",
+                    displayName: state.clipboardHotKeyDisplayName,
+                    onRecorded: actions.updateClipboardHotKey,
+                    onRestoreDefault: {
+                        actions.updateClipboardHotKey(
+                            .defaultReadClipboard
+                        )
+                    }
+                )
+
+                Text("选中文字后按选区快捷键；复制文字后按剪贴板快捷键。")
                     .font(.system(size: 9))
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
