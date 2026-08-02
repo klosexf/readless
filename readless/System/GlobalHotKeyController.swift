@@ -3,13 +3,14 @@ import Carbon.HIToolbox
 @MainActor
 final class GlobalHotKeyController {
     private static let signature: OSType = 0x52444C53
-    private static let identifier: UInt32 = 1
 
+    private let identifier: UInt32
     private var hotKeyRef: EventHotKeyRef?
     private var eventHandlerRef: EventHandlerRef?
     private let action: () -> Void
 
-    init(action: @escaping () -> Void) {
+    init(identifier: UInt32, action: @escaping () -> Void) {
+        self.identifier = identifier
         self.action = action
         installEventHandler()
     }
@@ -29,7 +30,7 @@ final class GlobalHotKeyController {
         unregister()
         let identifier = EventHotKeyID(
             signature: Self.signature,
-            id: Self.identifier
+            id: self.identifier
         )
         let status = RegisterEventHotKey(
             configuration.keyCode,
@@ -71,7 +72,7 @@ final class GlobalHotKeyController {
     private func handle(_ identifier: EventHotKeyID) {
         guard
             identifier.signature == Self.signature,
-            identifier.id == Self.identifier
+            identifier.id == self.identifier
         else {
             return
         }
