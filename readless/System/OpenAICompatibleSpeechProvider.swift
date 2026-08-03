@@ -34,7 +34,9 @@ final class OpenAICompatibleSpeechProvider: CloudAudioProviding {
     ) {
         guard let configuration = settings.configuration,
               configuration.provider == .openAICompatible,
-              let apiKey = try? credentials.credential(for: .openAICompatible),
+              let apiKey = try? credentials.credential(
+                  for: .openAICompatible
+              ),
               !apiKey.isEmpty,
               let request = try? OpenAICompatibleRequestBuilder.make(
                   configuration: configuration,

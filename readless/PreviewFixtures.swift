@@ -14,9 +14,10 @@ enum PreviewFixtures {
             setRate: { _ in },
             seekPlayback: { _ in },
             openCurrentPlayback: {},
-            savedVoiceServiceConfiguration: { nil },
+            voiceServiceProfiles: { VoiceServiceProfiles() },
             hasVoiceServiceCredential: { _ in false },
-            saveVoiceService: { _, _, _ in nil },
+            selectDoubaoVersion: { _ in },
+            saveVoiceService: { _, _ in nil },
             readTestSpeech: {},
             requestOnboardingAccessibility: {},
             confirmOnboardingAccessibility: { false }

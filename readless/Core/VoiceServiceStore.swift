@@ -8,18 +8,23 @@ protocol VoiceServiceReadinessChecking {
 @MainActor
 protocol VoiceServiceConfigurationStoring {
     var configuration: VoiceServiceConfiguration? { get }
+    var profiles: VoiceServiceProfiles { get }
+    func selectDoubaoVersion(_ version: DoubaoAPIVersion)
 }
 
 @MainActor
 protocol VoiceServiceCredentialChecking {
-    func hasCredential(for provider: VoiceProviderKind) -> Bool
+    func hasCredential(for slot: VoiceCredentialSlot) -> Bool
 }
 
 @MainActor
 protocol VoiceServiceCredentialStoring: VoiceServiceCredentialChecking {
-    func credential(for provider: VoiceProviderKind) throws -> String?
-    func saveCredential(_ credential: String, for provider: VoiceProviderKind) throws
-    func removeCredential(for provider: VoiceProviderKind) throws
+    func credential(for slot: VoiceCredentialSlot) throws -> String?
+    func saveCredential(
+        _ credential: String,
+        for slot: VoiceCredentialSlot
+    ) throws
+    func removeCredential(for slot: VoiceCredentialSlot) throws
 }
 
 @MainActor
@@ -42,7 +47,7 @@ final class StoredVoiceServiceReadiness: VoiceServiceReadinessChecking {
         else {
             return false
         }
-        return credentials.hasCredential(for: configuration.provider)
+        return credentials.hasCredential(for: configuration.credentialSlot)
     }
 }
 

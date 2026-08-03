@@ -25,6 +25,30 @@ final class VoiceServiceModelsTests: XCTestCase {
         )
     }
 
+    func testDoubaoV3RequiresResourceIDBeforeSpeaker() {
+        let configuration = VoiceServiceConfiguration.doubaoV3(
+            resourceID: "",
+            speaker: ""
+        )
+
+        XCTAssertEqual(configuration.validationError, .resourceIDRequired)
+    }
+
+    func testDoubaoVersionsUseSeparateCredentialSlots() {
+        let v1 = VoiceServiceConfiguration.doubao(
+            appID: "app-id",
+            cluster: "volcano_tts",
+            voiceType: "voice"
+        )
+        let v3 = VoiceServiceConfiguration.doubaoV3(
+            resourceID: "seed-tts-2.0",
+            speaker: "voice"
+        )
+
+        XCTAssertEqual(v1.credentialSlot, .doubaoV1)
+        XCTAssertEqual(v3.credentialSlot, .doubaoV3)
+    }
+
     func testOpenAIAndAlibabaRemainUnavailableCatalogEntries() {
         XCTAssertTrue(VoiceProviderKind.doubao.isAvailable)
         XCTAssertTrue(VoiceProviderKind.openAICompatible.isAvailable)

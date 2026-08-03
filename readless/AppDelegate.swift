@@ -94,15 +94,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             openCurrentPlayback: { [weak self] in
                 self?.showMainWindow(section: .currentPlayback)
             },
-            savedVoiceServiceConfiguration: {
-                voiceServiceSettings.configuration
+            voiceServiceProfiles: {
+                voiceServiceSettings.profiles
             },
-            hasVoiceServiceCredential: { provider in
-                credentialStore.hasCredential(for: provider)
+            hasVoiceServiceCredential: { slot in
+                credentialStore.hasCredential(for: slot)
             },
-            saveVoiceService: { [weak self] provider, configuration, credential in
+            selectDoubaoVersion: { version in
+                voiceServiceSettings.selectDoubaoVersion(version)
+            },
+            saveVoiceService: { [weak self] configuration, credential in
                 self?.saveVoiceService(
-                    provider: provider,
                     configuration: configuration,
                     credential: credential
                 ) ?? .persistenceFailed
@@ -232,7 +234,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func saveVoiceService(
-        provider: VoiceProviderKind,
         configuration: VoiceServiceConfiguration,
         credential: String
     ) -> VoiceServiceSaveError? {
@@ -245,7 +246,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
         let existingCredential: String?
         do {
-            existingCredential = try credentialStore.credential(for: provider)
+            existingCredential = try credentialStore.credential(
+                for: configuration.credentialSlot
+            )
         } catch {
             return .persistenceFailed
         }
@@ -253,7 +256,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             ? (existingCredential ?? "")
             : newCredential
         if let error = VoiceServiceConfigurationValidator.saveError(
-            for: provider,
+            for: configuration.provider,
             configuration: configuration,
             credential: credentialForValidation
         ) {
@@ -264,7 +267,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             if !newCredential.isEmpty {
                 try credentialStore.saveCredential(
                     newCredential,
-                    for: provider
+                    for: configuration.credentialSlot
                 )
             }
             try voiceServiceSettings.save(configuration: configuration)

@@ -26,7 +26,7 @@ final class DoubaoSpeechProvider: CloudAudioProviding {
     ) {
         guard let configuration = settings.configuration,
               case let .doubao(appID, cluster, voiceType) = configuration,
-              let token = try? credentials.credential(for: .doubao),
+              let token = try? credentials.credential(for: .doubaoV1),
               !token.isEmpty
         else {
             completion(.failure(.voiceServiceNotConfigured))
