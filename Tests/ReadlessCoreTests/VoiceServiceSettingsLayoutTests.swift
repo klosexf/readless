@@ -68,16 +68,23 @@ final class VoiceServiceSettingsLayoutTests: XCTestCase {
         XCTAssertTrue(source.contains(".frame(maxWidth: .infinity)"))
     }
 
-    func testReplacingCredentialDoesNotRequireReadingOldKeychainItem() throws {
+    func testSavingConfigurationWithoutCredentialSkipsKeychainAccess() throws {
         let source = try appDelegateSource()
         let saveMethod = try XCTUnwrap(
             source.components(separatedBy: "private func saveVoiceService(")
                 .dropFirst()
                 .first
         )
+        XCTAssertFalse(
+            saveMethod.contains("credentialStore.credential(")
+        )
+    }
+
+    func testCredentialSavedIndicatorChecksKeychainAfterSave() throws {
+        let source = try mainWindowSource()
 
         XCTAssertTrue(
-            saveMethod.contains("if newCredential.isEmpty {")
+            source.contains("actions.hasVoiceServiceCredential(configuration.credentialSlot)")
         )
     }
 

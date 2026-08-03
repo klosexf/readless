@@ -705,7 +705,11 @@ struct VoiceServiceEditor: View {
             return
         }
         credential = ""
-        savedCredentialSlots.insert(configuration.credentialSlot)
+        if actions.hasVoiceServiceCredential(configuration.credentialSlot) {
+            savedCredentialSlots.insert(configuration.credentialSlot)
+        } else {
+            savedCredentialSlots.remove(configuration.credentialSlot)
+        }
     }
 
     private func loadSavedConfiguration() {

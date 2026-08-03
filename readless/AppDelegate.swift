@@ -244,28 +244,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let newCredential = credential.trimmingCharacters(
             in: .whitespacesAndNewlines
         )
-        let credentialForValidation: String
-        if newCredential.isEmpty {
-            do {
-                credentialForValidation = try credentialStore.credential(
-                    for: configuration.credentialSlot
-                ) ?? ""
-            } catch {
-                return .persistenceFailed
-            }
-        } else {
-            credentialForValidation = newCredential
-        }
-        if let error = VoiceServiceConfigurationValidator.saveError(
-            for: configuration.provider,
-            configuration: configuration,
-            credential: credentialForValidation
-        ) {
-            return error
+        if let validationError = configuration.validationError {
+            return .validation(validationError)
         }
 
         do {
             if !newCredential.isEmpty {
+                if let error = VoiceServiceConfigurationValidator.saveError(
+                    for: configuration.provider,
+                    configuration: configuration,
+                    credential: newCredential
+                ) {
+                    return error
+                }
                 try credentialStore.saveCredential(
                     newCredential,
                     for: configuration.credentialSlot
