@@ -30,8 +30,17 @@ let package = Package(
                 "PreviewFixtures.swift",
                 "ProgressiveGlass.swift",
                 "ShortcutRecorderView.swift",
-                "System",
-                "readlessApp.swift"
+                "readlessApp.swift",
+                "System/AccessibilityPermissionController.swift",
+                "System/AccessibilitySelectionReader.swift",
+                "System/CloudSpeechEngine.swift",
+                "System/DoubaoSpeechProvider.swift",
+                "System/DoubaoV3SpeechProvider.swift",
+                "System/EscapeKeyMonitor.swift",
+                "System/GlobalHotKeyController.swift",
+                "System/OpenAICompatibleSpeechProvider.swift",
+                "System/SystemClipboardReader.swift",
+                "System/SystemSpeechEngine.swift"
             ],
             sources: [
                 "AppState.swift",
@@ -42,7 +51,9 @@ let package = Package(
                 "Core/TextSanitizer.swift",
                 "Core/HotKeyConfiguration.swift",
                 "Core/ReadingCoordinator.swift",
-                "Core/RuntimeEnvironment.swift"
+                "Core/RuntimeEnvironment.swift",
+                "System/VoiceServiceSettingsStore.swift",
+                "System/KeychainCredentialStore.swift"
             ]
         ),
         .testTarget(

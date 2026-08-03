@@ -485,14 +485,17 @@ struct VoiceServiceEditor: View {
     let showsTestButton: Bool
 
     @State private var provider: VoiceProviderKind = .doubao
+    @State private var doubaoVersion: DoubaoAPIVersion = .v3
     @State private var appID = ""
     @State private var cluster = "volcano_tts"
     @State private var voiceType = "zh_female_wanwanxiaohe_moon_bigtts"
+    @State private var resourceID = "seed-tts-2.0"
+    @State private var speaker = "zh_female_vv_uranus_bigtts"
     @State private var baseURL = ""
     @State private var model = ""
     @State private var voice = ""
     @State private var credential = ""
-    @State private var hasSavedCredential = false
+    @State private var savedCredentialSlots: Set<VoiceCredentialSlot> = []
     @State private var error: VoiceServiceSaveError?
     @State private var didLoad = false
 
@@ -556,16 +559,44 @@ struct VoiceServiceEditor: View {
             }
         }
         .onAppear(perform: loadSavedConfiguration)
+        .onChange(of: provider) { _, provider in
+            if provider == .doubao {
+                actions.selectDoubaoVersion(doubaoVersion)
+            }
+        }
+        .onChange(of: doubaoVersion) { _, version in
+            if provider == .doubao {
+                actions.selectDoubaoVersion(version)
+            }
+        }
     }
 
     @ViewBuilder
     private var providerFields: some View {
         switch provider {
         case .doubao:
-            labeledField("App ID", text: $appID, prompt: "火山引擎 App ID")
-            credentialField
-            labeledField("Cluster", text: $cluster, prompt: "例如 volcano_tts")
-            labeledField("音色", text: $voiceType, prompt: "voice_type")
+            serviceFormRow("接口版本") {
+                Picker("接口版本", selection: $doubaoVersion) {
+                    Text("V3（推荐）").tag(DoubaoAPIVersion.v3)
+                    Text("V1（兼容）").tag(DoubaoAPIVersion.v1)
+                }
+                .labelsHidden()
+            }
+            switch doubaoVersion {
+            case .v3:
+                credentialField
+                labeledField(
+                    "资源 ID",
+                    text: $resourceID,
+                    prompt: "例如 seed-tts-2.0"
+                )
+                labeledField("音色 ID", text: $speaker, prompt: "speaker")
+            case .v1:
+                labeledField("App ID", text: $appID, prompt: "火山引擎 App ID")
+                credentialField
+                labeledField("Cluster", text: $cluster, prompt: "例如 volcano_tts")
+                labeledField("音色", text: $voiceType, prompt: "voice_type")
+            }
         case .openAICompatible:
             labeledField("Base URL", text: $baseURL, prompt: "https://example.com")
             credentialField
@@ -577,13 +608,42 @@ struct VoiceServiceEditor: View {
     }
 
     private var credentialField: some View {
-        serviceFormRow(provider == .doubao ? "Access Token" : "API Key") {
+        serviceFormRow(credentialLabel) {
             SecureField(
                 hasSavedCredential ? "如需替换，请输入新的凭据" : "凭据保存在钥匙串",
                 text: $credential
             )
             .textFieldStyle(.roundedBorder)
         }
+    }
+
+    private var credentialLabel: String {
+        switch provider {
+        case .doubao:
+            doubaoVersion == .v3 ? "API Key" : "Access Token"
+        case .openAICompatible:
+            "API Key"
+        case .openAI, .alibaba:
+            "凭据"
+        }
+    }
+
+    private var currentCredentialSlot: VoiceCredentialSlot? {
+        switch provider {
+        case .doubao:
+            doubaoVersion == .v3 ? .doubaoV3 : .doubaoV1
+        case .openAICompatible:
+            .openAICompatible
+        case .openAI, .alibaba:
+            nil
+        }
+    }
+
+    private var hasSavedCredential: Bool {
+        guard let currentCredentialSlot else {
+            return false
+        }
+        return savedCredentialSlots.contains(currentCredentialSlot)
     }
 
     private func labeledField(
@@ -616,11 +676,19 @@ struct VoiceServiceEditor: View {
         let configuration: VoiceServiceConfiguration
         switch provider {
         case .doubao:
-            configuration = .doubao(
-                appID: appID,
-                cluster: cluster,
-                voiceType: voiceType
-            )
+            switch doubaoVersion {
+            case .v3:
+                configuration = .doubaoV3(
+                    resourceID: resourceID,
+                    speaker: speaker
+                )
+            case .v1:
+                configuration = .doubao(
+                    appID: appID,
+                    cluster: cluster,
+                    voiceType: voiceType
+                )
+            }
         case .openAICompatible:
             configuration = .openAICompatible(
                 baseURL: baseURL,
@@ -632,12 +700,12 @@ struct VoiceServiceEditor: View {
             return
         }
 
-        error = actions.saveVoiceService(provider, configuration, credential)
+        error = actions.saveVoiceService(configuration, credential)
         guard error == nil else {
             return
         }
         credential = ""
-        hasSavedCredential = true
+        savedCredentialSlots.insert(configuration.credentialSlot)
     }
 
     private func loadSavedConfiguration() {
@@ -645,21 +713,28 @@ struct VoiceServiceEditor: View {
             return
         }
         didLoad = true
-        guard let configuration = actions.savedVoiceServiceConfiguration() else {
-            return
-        }
-
-        provider = configuration.provider
-        hasSavedCredential = actions.hasVoiceServiceCredential(provider)
-        switch configuration {
-        case let .doubao(savedAppID, savedCluster, savedVoiceType):
+        let profiles = actions.voiceServiceProfiles()
+        provider = profiles.activeProvider
+        doubaoVersion = profiles.activeDoubaoVersion
+        if let configuration = profiles.doubaoV1,
+           case let .doubao(savedAppID, savedCluster, savedVoiceType) = configuration {
             appID = savedAppID
             cluster = savedCluster
             voiceType = savedVoiceType
-        case let .openAICompatible(savedBaseURL, savedModel, savedVoice):
+        }
+        if let configuration = profiles.doubaoV3,
+           case let .doubaoV3(savedResourceID, savedSpeaker) = configuration {
+            resourceID = savedResourceID
+            speaker = savedSpeaker
+        }
+        if let configuration = profiles.openAICompatible,
+           case let .openAICompatible(savedBaseURL, savedModel, savedVoice) = configuration {
             baseURL = savedBaseURL
             model = savedModel
             voice = savedVoice
+        }
+        for slot in VoiceCredentialSlot.allCases where actions.hasVoiceServiceCredential(slot) {
+            savedCredentialSlots.insert(slot)
         }
     }
 }

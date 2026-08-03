@@ -9,10 +9,10 @@ struct ReadlessActions {
     let setRate: (Float) -> Void
     let seekPlayback: (Double) -> Void
     let openCurrentPlayback: () -> Void
-    let savedVoiceServiceConfiguration: () -> VoiceServiceConfiguration?
-    let hasVoiceServiceCredential: (VoiceProviderKind) -> Bool
+    let voiceServiceProfiles: () -> VoiceServiceProfiles
+    let hasVoiceServiceCredential: (VoiceCredentialSlot) -> Bool
+    let selectDoubaoVersion: (DoubaoAPIVersion) -> Void
     let saveVoiceService: (
-        VoiceProviderKind,
         VoiceServiceConfiguration,
         String
     ) -> VoiceServiceSaveError?
