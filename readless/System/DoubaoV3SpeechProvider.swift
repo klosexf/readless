@@ -42,7 +42,9 @@ final class DoubaoV3SpeechProvider: CloudAudioProviding {
 
         collector = DoubaoV3SynthesisCollector()
         self.completion = completion
-        let task = session.webSocketTask(with: request)
+        var handshakeRequest = request
+        handshakeRequest.httpBody = nil
+        let task = session.webSocketTask(with: handshakeRequest)
         self.task = task
         task.resume()
         task.send(.data(packet)) { [weak self] error in
