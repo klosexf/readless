@@ -106,6 +106,70 @@ final class CloudSpeechRequestTests: XCTestCase {
         XCTAssertEqual(DoubaoV3PacketDecoder.decode(packet), .finished)
     }
 
+    func testDoubaoV3ErrorResponseMapsStatusCode() {
+        let packet = Data([
+            0x11, 0xF0, 0x10, 0x00,
+            0x00, 0x00, 0x01, 0x91,
+            0x00, 0x00, 0x00, 0x02,
+            0x7B, 0x7D
+        ])
+
+        XCTAssertEqual(
+            DoubaoV3PacketDecoder.decode(packet),
+            .failure(.voiceServiceCredentialInvalid)
+        )
+    }
+
+    func testDoubaoV3ErrorResponseMapsJSONMessage() {
+        let payload = Data(#"{"message":"invalid api key"}"#.utf8)
+        var packet = Data([
+            0x11, 0xF0, 0x10, 0x00,
+            0x00, 0x00, 0x00, 0x01,
+            0x00, 0x00, 0x00, UInt8(payload.count)
+        ])
+        packet.append(payload)
+
+        XCTAssertEqual(
+            DoubaoV3PacketDecoder.decode(packet),
+            .failure(.voiceServiceCredentialInvalid)
+        )
+    }
+
+    func testDoubaoV3CollectorRejectsFinishedSessionWithoutAudio() {
+        var collector = DoubaoV3SynthesisCollector()
+
+        let result = collector.consume(.finished)
+
+        guard case let .failure(error)? = result else {
+            return XCTFail("Expected an invalid-response failure")
+        }
+        XCTAssertEqual(error, .voiceServiceResponseInvalid)
+    }
+
+    func testDoubaoV3CollectorReturnsMergedAudioAtSessionFinish() {
+        var collector = DoubaoV3SynthesisCollector()
+
+        XCTAssertNil(collector.consume(.audio(Data([0x01]))))
+        XCTAssertNil(collector.consume(.audio(Data([0x02, 0x03]))))
+        let result = collector.consume(.finished)
+
+        guard case let .success(audio)? = result else {
+            return XCTFail("Expected merged audio")
+        }
+        XCTAssertEqual(audio, Data([0x01, 0x02, 0x03]))
+    }
+
+    func testDoubaoV3CollectorStopsOnServiceFailure() {
+        var collector = DoubaoV3SynthesisCollector()
+
+        let result = collector.consume(.failure(.voiceServiceQuotaExceeded))
+
+        guard case let .failure(error)? = result else {
+            return XCTFail("Expected the service failure")
+        }
+        XCTAssertEqual(error, .voiceServiceQuotaExceeded)
+    }
+
     func testV3ConfigurationRoutesOnlyToV3Transport() {
         let configuration = VoiceServiceConfiguration.doubaoV3(
             resourceID: "seed-tts-2.0",

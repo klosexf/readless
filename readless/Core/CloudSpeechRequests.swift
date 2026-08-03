@@ -89,6 +89,29 @@ enum DoubaoV3Response: Equatable {
     case ignore
 }
 
+struct DoubaoV3SynthesisCollector {
+    private var audioData = Data()
+
+    mutating func consume(
+        _ response: DoubaoV3Response
+    ) -> Result<Data, ReadingError>? {
+        switch response {
+        case let .audio(data):
+            audioData.append(data)
+            return nil
+        case .finished:
+            guard !audioData.isEmpty else {
+                return .failure(.voiceServiceResponseInvalid)
+            }
+            return .success(audioData)
+        case let .failure(error):
+            return .failure(error)
+        case .ignore:
+            return nil
+        }
+    }
+}
+
 enum DoubaoV3PacketDecoder {
     private enum MessageType: UInt8 {
         case fullServerResponse = 0x09
@@ -119,11 +142,13 @@ enum DoubaoV3PacketDecoder {
         let flags = packet[1] & 0x0F
         var offset = headerSize
         var serverEvent: Event?
+        var errorCode: UInt32?
 
         if messageType == .error {
-            guard packet.uint32(at: offset) != nil else {
+            guard let code = packet.uint32(at: offset) else {
                 return .failure(.voiceServiceResponseInvalid)
             }
+            errorCode = code
             offset += 4
         } else if flags == 0x01 || flags == 0x03 {
             guard packet.signedInt32(at: offset) != nil else {
@@ -180,7 +205,12 @@ enum DoubaoV3PacketDecoder {
                 return .ignore
             }
         case .error:
-            return .failure(mapFailurePayload(payload))
+            return .failure(
+                CloudSpeechErrorMapper.mapDoubaoV3Error(
+                    protocolCode: errorCode,
+                    payload: payload
+                )
+            )
         }
     }
 
@@ -261,13 +291,52 @@ enum CloudSpeechErrorMapper {
         if normalized.contains("quota") || normalized.contains("concurrency") {
             return .voiceServiceQuotaExceeded
         }
-        if normalized.contains("auth") || normalized.contains("grant") {
+        if normalized.contains("auth")
+            || normalized.contains("grant")
+            || normalized.contains("api key") {
             return .voiceServiceCredentialInvalid
         }
         if normalized.contains("timeout") {
             return .voiceServiceTimedOut
         }
         return .voiceServiceResponseInvalid
+    }
+
+    static func mapDoubaoV3Error(
+        protocolCode: UInt32?,
+        payload: Data
+    ) -> ReadingError {
+        if let protocolCode,
+           let mapped = knownHTTPStatusMapping(for: protocolCode) {
+            return mapped
+        }
+        return mapDoubaoMessage(message(from: payload))
+    }
+
+    private static func knownHTTPStatusMapping(
+        for code: UInt32
+    ) -> ReadingError? {
+        switch code {
+        case 401, 403:
+            .voiceServiceCredentialInvalid
+        case 408, 504:
+            .voiceServiceTimedOut
+        case 429:
+            .voiceServiceQuotaExceeded
+        default:
+            nil
+        }
+    }
+
+    private static func message(from payload: Data) -> String {
+        guard let object = try? JSONSerialization.jsonObject(with: payload),
+              let response = object as? [String: Any]
+        else {
+            return String(data: payload, encoding: .utf8) ?? ""
+        }
+        return ["message", "err_msg", "error", "error_description"]
+            .compactMap { response[$0] as? String }
+            .joined(separator: " ")
     }
 }
 

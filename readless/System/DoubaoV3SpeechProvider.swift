@@ -6,7 +6,7 @@ final class DoubaoV3SpeechProvider: CloudAudioProviding {
     private let credentials: VoiceServiceCredentialStoring
     private let session: URLSession
     private var task: URLSessionWebSocketTask?
-    private var audioData = Data()
+    private var collector = DoubaoV3SynthesisCollector()
     private var completion: ((Result<Data, ReadingError>) -> Void)?
 
     init(
@@ -40,7 +40,7 @@ final class DoubaoV3SpeechProvider: CloudAudioProviding {
             return
         }
 
-        audioData = Data()
+        collector = DoubaoV3SynthesisCollector()
         self.completion = completion
         let task = session.webSocketTask(with: request)
         self.task = task
@@ -63,10 +63,11 @@ final class DoubaoV3SpeechProvider: CloudAudioProviding {
         task?.cancel(with: .goingAway, reason: nil)
         task = nil
         completion = nil
-        audioData = Data()
+        collector = DoubaoV3SynthesisCollector()
     }
 
     private func receiveNext() {
+        guard completion != nil else { return }
         task?.receive { [weak self] result in
             Task { @MainActor [weak self] in
                 guard let self else { return }
@@ -83,19 +84,9 @@ final class DoubaoV3SpeechProvider: CloudAudioProviding {
     }
 
     private func handle(_ packet: Data) {
-        switch DoubaoV3PacketDecoder.decode(packet) {
-        case let .audio(data):
-            audioData.append(data)
-            receiveNext()
-        case .finished:
-            guard !audioData.isEmpty else {
-                finish(.failure(.voiceServiceResponseInvalid))
-                return
-            }
-            finish(.success(audioData))
-        case let .failure(error):
-            finish(.failure(error))
-        case .ignore:
+        if let result = collector.consume(DoubaoV3PacketDecoder.decode(packet)) {
+            finish(result)
+        } else {
             receiveNext()
         }
     }
