@@ -33,9 +33,14 @@ final class CloudSpeechEngine: NSObject, SpeechEngine {
         }
 
         let provider: CloudAudioProviding
-        switch configuration.provider {
-        case .doubao:
+        switch CloudSpeechTransport.route(for: configuration) {
+        case .doubaoV1:
             provider = DoubaoSpeechProvider(
+                settings: settings,
+                credentials: credentials
+            )
+        case .doubaoV3:
+            provider = DoubaoV3SpeechProvider(
                 settings: settings,
                 credentials: credentials
             )
@@ -44,8 +49,6 @@ final class CloudSpeechEngine: NSObject, SpeechEngine {
                 settings: settings,
                 credentials: credentials
             )
-        case .openAI, .alibaba:
-            throw ReadingError.voiceServiceNotConfigured
         }
         activeSessionID = sessionID
         self.provider = provider

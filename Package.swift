@@ -35,6 +35,7 @@ let package = Package(
                 "System/AccessibilitySelectionReader.swift",
                 "System/CloudSpeechEngine.swift",
                 "System/DoubaoSpeechProvider.swift",
+                "System/DoubaoV3SpeechProvider.swift",
                 "System/EscapeKeyMonitor.swift",
                 "System/GlobalHotKeyController.swift",
                 "System/OpenAICompatibleSpeechProvider.swift",
