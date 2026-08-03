@@ -68,15 +68,34 @@ final class VoiceServiceSettingsLayoutTests: XCTestCase {
         XCTAssertTrue(source.contains(".frame(maxWidth: .infinity)"))
     }
 
+    func testReplacingCredentialDoesNotRequireReadingOldKeychainItem() throws {
+        let source = try appDelegateSource()
+        let saveMethod = try XCTUnwrap(
+            source.components(separatedBy: "private func saveVoiceService(")
+                .dropFirst()
+                .first
+        )
+
+        XCTAssertTrue(
+            saveMethod.contains("if newCredential.isEmpty {")
+        )
+    }
+
     private func mainWindowSource() throws -> String {
+        try source(named: "readless/MainWindowView.swift")
+    }
+
+    private func appDelegateSource() throws -> String {
+        try source(named: "readless/AppDelegate.swift")
+    }
+
+    private func source(named path: String) throws -> String {
         let root = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .deletingLastPathComponent()
         return try String(
-            contentsOf: root.appendingPathComponent(
-                "readless/MainWindowView.swift"
-            ),
+            contentsOf: root.appendingPathComponent(path),
             encoding: .utf8
         )
     }
