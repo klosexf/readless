@@ -5,9 +5,8 @@ final class DoubaoV3SpeechProvider: CloudAudioProviding {
     private let settings: VoiceServiceConfigurationStoring
     private let credentials: VoiceServiceCredentialStoring
     private let session: URLSession
-    private var task: URLSessionWebSocketTask?
-    private var collector = DoubaoV3SynthesisCollector()
-    private var completion: ((Result<Data, ReadingError>) -> Void)?
+    private var task: URLSessionDataTask?
+    private var requestGeneration = 0
 
     init(
         settings: VoiceServiceConfigurationStoring,
@@ -33,77 +32,83 @@ final class DoubaoV3SpeechProvider: CloudAudioProviding {
                   apiKey: apiKey,
                   text: text,
                   rate: rate
-              ),
-              let packet = request.httpBody
+              )
         else {
             completion(.failure(.voiceServiceNotConfigured))
             return
         }
 
-        collector = DoubaoV3SynthesisCollector()
-        self.completion = completion
-        var handshakeRequest = request
-        handshakeRequest.httpBody = nil
-        let task = session.webSocketTask(with: handshakeRequest)
-        self.task = task
-        task.resume()
-        task.send(.data(packet)) { [weak self] error in
-            if let error {
-                Task { @MainActor [weak self] in
-                    guard let self else { return }
-                    self.finish(.failure(self.mapTransportError(error)))
-                }
-                return
-            }
+        task?.cancel()
+        requestGeneration += 1
+        let generation = requestGeneration
+        let task = session.dataTask(with: request) {
+            [weak self] data, response, transportError in
             Task { @MainActor [weak self] in
-                self?.receiveNext()
+                guard let self,
+                      self.requestGeneration == generation else {
+                    return
+                }
+                self.task = nil
+
+                if let error = transportError as? URLError {
+                    completion(
+                        .failure(
+                            error.code == .timedOut
+                                ? .voiceServiceTimedOut
+                                : .voiceServiceNetworkUnavailable
+                        )
+                    )
+                    return
+                }
+                if transportError != nil {
+                    completion(.failure(.voiceServiceNetworkUnavailable))
+                    return
+                }
+                guard let response = response as? HTTPURLResponse else {
+                    completion(.failure(.voiceServiceNetworkUnavailable))
+                    return
+                }
+                guard (200...299).contains(response.statusCode) else {
+                    completion(
+                        .failure(
+                            self.mapHTTPFailure(
+                                statusCode: response.statusCode,
+                                data: data
+                            )
+                        )
+                    )
+                    return
+                }
+                guard let data, !data.isEmpty else {
+                    completion(.failure(.voiceServiceResponseInvalid))
+                    return
+                }
+                completion(DoubaoV3HTTPResponseDecoder.decode(data))
             }
         }
+        self.task = task
+        task.resume()
     }
 
     func cancel() {
-        task?.cancel(with: .goingAway, reason: nil)
+        requestGeneration += 1
+        task?.cancel()
         task = nil
-        completion = nil
-        collector = DoubaoV3SynthesisCollector()
     }
 
-    private func receiveNext() {
-        guard completion != nil else { return }
-        task?.receive { [weak self] result in
-            Task { @MainActor [weak self] in
-                guard let self else { return }
-                switch result {
-                case let .success(.data(packet)):
-                    self.handle(packet)
-                case .success:
-                    self.finish(.failure(.voiceServiceResponseInvalid))
-                case let .failure(error):
-                    self.finish(.failure(self.mapTransportError(error)))
-                }
-            }
+    private func mapHTTPFailure(
+        statusCode: Int,
+        data: Data?
+    ) -> ReadingError {
+        if [401, 403, 408, 429, 504].contains(statusCode) {
+            return CloudSpeechErrorMapper.map(statusCode: statusCode)
         }
-    }
-
-    private func handle(_ packet: Data) {
-        if let result = collector.consume(DoubaoV3PacketDecoder.decode(packet)) {
-            finish(result)
-        } else {
-            receiveNext()
+        if let data,
+           case let .failure(serviceError) =
+               DoubaoV3HTTPResponseDecoder.decode(data),
+           serviceError != .voiceServiceResponseInvalid {
+            return serviceError
         }
-    }
-
-    private func mapTransportError(_ error: Error) -> ReadingError {
-        (error as? URLError)?.code == .timedOut
-            ? .voiceServiceTimedOut
-            : .voiceServiceNetworkUnavailable
-    }
-
-    private func finish(_ result: Result<Data, ReadingError>) {
-        let completion = completion
-        self.completion = nil
-        task?.cancel(with: .normalClosure, reason: nil)
-        task = nil
-        completion?(result)
+        return CloudSpeechErrorMapper.map(statusCode: statusCode)
     }
 }
