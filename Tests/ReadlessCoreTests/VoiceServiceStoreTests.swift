@@ -124,29 +124,6 @@ final class VoiceServiceStoreTests: XCTestCase {
         XCTAssertEqual(store.profiles.doubaoV3, v3)
     }
 
-    func testKeychainUsesLegacyCredentialOnlyForV1() throws {
-        let store = KeychainCredentialStore(
-            service: "com.xiaofengchen.readless.tests.\(UUID().uuidString)"
-        )
-        defer {
-            try? store.removeCredential(for: .doubaoLegacy)
-            try? store.removeCredential(for: .doubaoV1)
-            try? store.removeCredential(for: .doubaoV3)
-        }
-
-        try store.saveCredential("legacy-test-value", for: .doubaoLegacy)
-
-        XCTAssertEqual(
-            try store.credential(for: .doubaoV1),
-            "legacy-test-value"
-        )
-        XCTAssertNil(try store.credential(for: .doubaoV3))
-
-        try store.saveCredential("v1-test-value", for: .doubaoV1)
-
-        XCTAssertEqual(try store.credential(for: .doubaoV1), "v1-test-value")
-    }
-
     private func makeDefaults() -> UserDefaults {
         let suiteName = "VoiceServiceStoreTests-\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!

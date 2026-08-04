@@ -38,6 +38,7 @@ let package = Package(
                 "System/DoubaoV3SpeechProvider.swift",
                 "System/EscapeKeyMonitor.swift",
                 "System/GlobalHotKeyController.swift",
+                "System/KeychainCredentialStore.swift",
                 "System/OpenAICompatibleSpeechProvider.swift",
                 "System/SystemClipboardReader.swift",
                 "System/SystemSpeechEngine.swift"
@@ -53,7 +54,7 @@ let package = Package(
                 "Core/ReadingCoordinator.swift",
                 "Core/RuntimeEnvironment.swift",
                 "System/VoiceServiceSettingsStore.swift",
-                "System/KeychainCredentialStore.swift"
+                "System/LocalCredentialStore.swift"
             ]
         ),
         .testTarget(
