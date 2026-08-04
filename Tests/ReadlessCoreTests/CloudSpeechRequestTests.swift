@@ -31,7 +31,7 @@ final class CloudSpeechRequestTests: XCTestCase {
         )
     }
 
-    func testDoubaoV3RequestUsesProfileHeadersAndPacketPayload() throws {
+    func testDoubaoV3RequestUsesHTTPHeadersAndJSONBody() throws {
         let requestID = try XCTUnwrap(
             UUID(uuidString: "11111111-2222-3333-4444-555555555555")
         )
@@ -48,8 +48,9 @@ final class CloudSpeechRequestTests: XCTestCase {
 
         XCTAssertEqual(
             request.url?.absoluteString,
-            "wss://openspeech.bytedance.com/api/v3/tts/unidirectional/stream"
+            "https://openspeech.bytedance.com/api/v3/tts/unidirectional"
         )
+        XCTAssertEqual(request.httpMethod, "POST")
         XCTAssertEqual(
             request.value(forHTTPHeaderField: "X-Api-Key"),
             "unit-test-key"
@@ -62,12 +63,15 @@ final class CloudSpeechRequestTests: XCTestCase {
             request.value(forHTTPHeaderField: "X-Api-Request-Id"),
             requestID.uuidString
         )
+        XCTAssertEqual(
+            request.value(forHTTPHeaderField: "Content-Type"),
+            "application/json"
+        )
 
-        let packet = try XCTUnwrap(request.httpBody)
-        XCTAssertEqual(Array(packet.prefix(4)), [0x11, 0x10, 0x10, 0x00])
-        let payload = Data(packet.dropFirst(8))
         let body = try XCTUnwrap(
-            JSONSerialization.jsonObject(with: payload) as? [String: Any]
+            JSONSerialization.jsonObject(
+                with: XCTUnwrap(request.httpBody)
+            ) as? [String: Any]
         )
         let parameters = try XCTUnwrap(body["req_params"] as? [String: Any])
         let audio = try XCTUnwrap(parameters["audio_params"] as? [String: Any])
@@ -79,95 +83,49 @@ final class CloudSpeechRequestTests: XCTestCase {
         XCTAssertEqual(audio["speech_rate"] as? Int, 0)
     }
 
-    func testDoubaoV3AudioResponseDecodesPayload() {
-        let packet = Data([
-            0x11, 0xB4, 0x00, 0x00,
-            0x00, 0x00, 0x01, 0x60,
-            0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x03,
-            0x01, 0x02, 0x03
-        ])
-
+    func testDoubaoV3HTTPResponseMergesAudioChunks() {
+        let response = Data(
+            """
+            {"code":0,"data":"AQI="}
+            {"code":0,"data":"AwQ="}
+            {"code":20000000,"message":"OK"}
+            """.utf8
+        )
         XCTAssertEqual(
-            DoubaoV3PacketDecoder.decode(packet),
-            .audio(Data([0x01, 0x02, 0x03]))
+            DoubaoV3HTTPResponseDecoder.decode(response),
+            .success(Data([0x01, 0x02, 0x03, 0x04]))
         )
     }
 
-    func testDoubaoV3SessionFinishedResponseEndsSynthesis() {
-        let packet = Data([
-            0x11, 0x94, 0x10, 0x00,
-            0x00, 0x00, 0x00, 0x98,
-            0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x02,
-            0x7B, 0x7D
-        ])
-
-        XCTAssertEqual(DoubaoV3PacketDecoder.decode(packet), .finished)
-    }
-
-    func testDoubaoV3ErrorResponseMapsStatusCode() {
-        let packet = Data([
-            0x11, 0xF0, 0x10, 0x00,
-            0x00, 0x00, 0x01, 0x91,
-            0x00, 0x00, 0x00, 0x02,
-            0x7B, 0x7D
-        ])
+    func testDoubaoV3HTTPResponseRejectsInvalidBase64() {
+        let response = Data(#"{"code":0,"data":"%%%"}"#.utf8)
 
         XCTAssertEqual(
-            DoubaoV3PacketDecoder.decode(packet),
+            DoubaoV3HTTPResponseDecoder.decode(response),
+            .failure(.voiceServiceResponseInvalid)
+        )
+    }
+
+    func testDoubaoV3HTTPResponseMapsCredentialMessage() {
+        let response = Data(
+            #"{"code":45000000,"message":"invalid api key"}"#.utf8
+        )
+
+        XCTAssertEqual(
+            DoubaoV3HTTPResponseDecoder.decode(response),
             .failure(.voiceServiceCredentialInvalid)
         )
     }
 
-    func testDoubaoV3ErrorResponseMapsJSONMessage() {
-        let payload = Data(#"{"message":"invalid api key"}"#.utf8)
-        var packet = Data([
-            0x11, 0xF0, 0x10, 0x00,
-            0x00, 0x00, 0x00, 0x01,
-            0x00, 0x00, 0x00, UInt8(payload.count)
-        ])
-        packet.append(payload)
+    func testDoubaoV3HTTPResponseRejectsEmptyAudio() {
+        let response = Data(
+            #"{"code":20000000,"message":"OK"}"#.utf8
+        )
 
         XCTAssertEqual(
-            DoubaoV3PacketDecoder.decode(packet),
-            .failure(.voiceServiceCredentialInvalid)
+            DoubaoV3HTTPResponseDecoder.decode(response),
+            .failure(.voiceServiceResponseInvalid)
         )
-    }
-
-    func testDoubaoV3CollectorRejectsFinishedSessionWithoutAudio() {
-        var collector = DoubaoV3SynthesisCollector()
-
-        let result = collector.consume(.finished)
-
-        guard case let .failure(error)? = result else {
-            return XCTFail("Expected an invalid-response failure")
-        }
-        XCTAssertEqual(error, .voiceServiceResponseInvalid)
-    }
-
-    func testDoubaoV3CollectorReturnsMergedAudioAtSessionFinish() {
-        var collector = DoubaoV3SynthesisCollector()
-
-        XCTAssertNil(collector.consume(.audio(Data([0x01]))))
-        XCTAssertNil(collector.consume(.audio(Data([0x02, 0x03]))))
-        let result = collector.consume(.finished)
-
-        guard case let .success(audio)? = result else {
-            return XCTFail("Expected merged audio")
-        }
-        XCTAssertEqual(audio, Data([0x01, 0x02, 0x03]))
-    }
-
-    func testDoubaoV3CollectorStopsOnServiceFailure() {
-        var collector = DoubaoV3SynthesisCollector()
-
-        let result = collector.consume(.failure(.voiceServiceQuotaExceeded))
-
-        guard case let .failure(error)? = result else {
-            return XCTFail("Expected the service failure")
-        }
-        XCTAssertEqual(error, .voiceServiceQuotaExceeded)
     }
 
     func testV3ConfigurationRoutesOnlyToV3Transport() {

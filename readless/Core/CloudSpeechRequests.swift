@@ -26,7 +26,7 @@ enum CloudSpeechTransport: Equatable {
 
 enum DoubaoV3RequestBuilder {
     private static let endpoint = URL(
-        string: "wss://openspeech.bytedance.com/api/v3/tts/unidirectional/stream"
+        string: "https://openspeech.bytedance.com/api/v3/tts/unidirectional"
     )!
 
     static func make(
@@ -63,6 +63,7 @@ enum DoubaoV3RequestBuilder {
         )
 
         var request = URLRequest(url: endpoint)
+        request.httpMethod = "POST"
         request.timeoutInterval = 15
         request.setValue(apiKey, forHTTPHeaderField: "X-Api-Key")
         request.setValue(resourceID, forHTTPHeaderField: "X-Api-Resource-Id")
@@ -70,153 +71,64 @@ enum DoubaoV3RequestBuilder {
             requestID.uuidString,
             forHTTPHeaderField: "X-Api-Request-Id"
         )
-        request.httpBody = makeFullClientRequestPacket(payload: payload)
+        request.setValue(
+            "application/json",
+            forHTTPHeaderField: "Content-Type"
+        )
+        request.httpBody = payload
         return request
     }
-
-    private static func makeFullClientRequestPacket(payload: Data) -> Data {
-        var packet = Data([0x11, 0x10, 0x10, 0x00])
-        packet.appendUInt32(UInt32(payload.count))
-        packet.append(payload)
-        return packet
-    }
 }
 
-enum DoubaoV3Response: Equatable {
-    case audio(Data)
-    case finished
-    case failure(ReadingError)
-    case ignore
-}
-
-struct DoubaoV3SynthesisCollector {
-    private var audioData = Data()
-
-    mutating func consume(
-        _ response: DoubaoV3Response
-    ) -> Result<Data, ReadingError>? {
-        switch response {
-        case let .audio(data):
-            audioData.append(data)
-            return nil
-        case .finished:
-            guard !audioData.isEmpty else {
-                return .failure(.voiceServiceResponseInvalid)
-            }
-            return .success(audioData)
-        case let .failure(error):
-            return .failure(error)
-        case .ignore:
-            return nil
-        }
-    }
-}
-
-enum DoubaoV3PacketDecoder {
-    private enum MessageType: UInt8 {
-        case fullServerResponse = 0x09
-        case audioOnlyServer = 0x0B
-        case error = 0x0F
+enum DoubaoV3HTTPResponseDecoder {
+    private struct Chunk: Decodable {
+        let code: Int
+        let data: String?
     }
 
-    private enum Event: Int32 {
-        case connectionStarted = 50
-        case connectionFailed = 51
-        case connectionFinished = 52
-        case sessionFinished = 152
-        case sessionFailed = 153
-        case ttsResponse = 352
-    }
-
-    static func decode(_ packet: Data) -> DoubaoV3Response {
-        guard packet.count >= 4 else {
-            return .failure(.voiceServiceResponseInvalid)
-        }
-        let headerSize = Int(packet[0] & 0x0F) * 4
-        guard headerSize >= 4, headerSize <= packet.count,
-              let messageType = MessageType(rawValue: packet[1] >> 4)
-        else {
+    static func decode(_ response: Data) -> Result<Data, ReadingError> {
+        guard let body = String(data: response, encoding: .utf8) else {
             return .failure(.voiceServiceResponseInvalid)
         }
 
-        let flags = packet[1] & 0x0F
-        var offset = headerSize
-        var serverEvent: Event?
-        var errorCode: UInt32?
+        let lines = body.split(whereSeparator: { $0.isNewline })
+        guard !lines.isEmpty else {
+            return .failure(.voiceServiceResponseInvalid)
+        }
 
-        if messageType == .error {
-            guard let code = packet.uint32(at: offset) else {
+        var audio = Data()
+        for line in lines {
+            let lineData = Data(line.utf8)
+            guard let chunk = try? JSONDecoder().decode(
+                Chunk.self,
+                from: lineData
+            ) else {
                 return .failure(.voiceServiceResponseInvalid)
             }
-            errorCode = code
-            offset += 4
-        } else if flags == 0x01 || flags == 0x03 {
-            guard packet.signedInt32(at: offset) != nil else {
-                return .failure(.voiceServiceResponseInvalid)
-            }
-            offset += 4
-        }
 
-        if flags == 0x04 {
-            guard let rawEvent = packet.signedInt32(at: offset) else {
-                return .failure(.voiceServiceResponseInvalid)
-            }
-            serverEvent = Event(rawValue: rawEvent)
-            offset += 4
-
-            if serverEvent != .connectionStarted,
-               serverEvent != .connectionFailed,
-               serverEvent != .connectionFinished {
-                guard let sessionIDLength = packet.uint32(at: offset) else {
-                    return .failure(.voiceServiceResponseInvalid)
-                }
-                offset += 4
-                let sessionIDEnd = offset + Int(sessionIDLength)
-                guard sessionIDEnd <= packet.count else {
-                    return .failure(.voiceServiceResponseInvalid)
-                }
-                offset = sessionIDEnd
-            }
-        }
-
-        guard let payloadLength = packet.uint32(at: offset) else {
-            return .failure(.voiceServiceResponseInvalid)
-        }
-        offset += 4
-        let payloadEnd = offset + Int(payloadLength)
-        guard payloadEnd <= packet.count else {
-            return .failure(.voiceServiceResponseInvalid)
-        }
-        let payload = Data(packet[offset..<payloadEnd])
-
-        switch messageType {
-        case .audioOnlyServer:
-            guard serverEvent == nil || serverEvent == .ttsResponse else {
-                return .ignore
-            }
-            return .audio(payload)
-        case .fullServerResponse:
-            switch serverEvent {
-            case .sessionFinished:
-                return .finished
-            case .sessionFailed:
-                return .failure(mapFailurePayload(payload))
-            default:
-                return .ignore
-            }
-        case .error:
-            return .failure(
-                CloudSpeechErrorMapper.mapDoubaoV3Error(
-                    protocolCode: errorCode,
-                    payload: payload
+            guard chunk.code == 0 || chunk.code == 20_000_000 else {
+                return .failure(
+                    CloudSpeechErrorMapper.mapDoubaoV3Error(
+                        protocolCode: UInt32(exactly: chunk.code),
+                        payload: lineData
+                    )
                 )
-            )
-        }
-    }
+            }
 
-    private static func mapFailurePayload(_ payload: Data) -> ReadingError {
-        let message = String(data: payload, encoding: .utf8) ?? ""
-        return CloudSpeechErrorMapper.mapDoubaoMessage(message)
+            if let encodedAudio = chunk.data, !encodedAudio.isEmpty {
+                guard let chunkAudio = Data(
+                    base64Encoded: encodedAudio
+                ), !chunkAudio.isEmpty else {
+                    return .failure(.voiceServiceResponseInvalid)
+                }
+                audio.append(chunkAudio)
+            }
+        }
+
+        guard !audio.isEmpty else {
+            return .failure(.voiceServiceResponseInvalid)
+        }
+        return .success(audio)
     }
 }
 
@@ -337,27 +249,5 @@ enum CloudSpeechErrorMapper {
         return ["message", "err_msg", "error", "error_description"]
             .compactMap { response[$0] as? String }
             .joined(separator: " ")
-    }
-}
-
-private extension Data {
-    func uint32(at offset: Int) -> UInt32? {
-        guard offset + 4 <= count else { return nil }
-        return self[offset..<(offset + 4)].reduce(0) {
-            ($0 << 8) | UInt32($1)
-        }
-    }
-
-    func signedInt32(at offset: Int) -> Int32? {
-        uint32(at: offset).map { Int32(bitPattern: $0) }
-    }
-
-    mutating func appendUInt32(_ value: UInt32) {
-        append(contentsOf: [
-            UInt8((value >> 24) & 0xFF),
-            UInt8((value >> 16) & 0xFF),
-            UInt8((value >> 8) & 0xFF),
-            UInt8(value & 0xFF)
-        ])
     }
 }
