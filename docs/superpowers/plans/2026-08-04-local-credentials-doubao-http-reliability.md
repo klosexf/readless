@@ -30,6 +30,7 @@
 - Create: `Tests/ReadlessCoreTests/LocalCredentialStoreTests.swift`
 - Create: `readless/System/LocalCredentialStore.swift`
 - Modify: `Package.swift`
+- Modify: `Tests/ReadlessCoreTests/VoiceServiceStoreTests.swift`
 
 - [ ] **Step 1: Write failing local-store tests**
 
@@ -227,7 +228,7 @@ final class LocalCredentialStore: VoiceServiceCredentialStoring {
 }
 ```
 
-Add `System/LocalCredentialStore.swift` to the explicit `sources` list in `Package.swift` and remove `System/KeychainCredentialStore.swift` from that list.
+Add `System/LocalCredentialStore.swift` to the explicit `sources` list in `Package.swift`, remove `System/KeychainCredentialStore.swift` from that list, and add the legacy file to `exclude` so SwiftPM does not report it as unhandled. Remove `testKeychainUsesLegacyCredentialOnlyForV1`; `LocalCredentialStoreTests` now owns persistence and slot-isolation coverage without touching Keychain.
 
 - [ ] **Step 4: Run the focused test and verify GREEN**
 
@@ -239,7 +240,8 @@ Expected: 4 tests pass with 0 failures.
 
 ```bash
 git add Package.swift readless/System/LocalCredentialStore.swift \
-  Tests/ReadlessCoreTests/LocalCredentialStoreTests.swift
+  Tests/ReadlessCoreTests/LocalCredentialStoreTests.swift \
+  Tests/ReadlessCoreTests/VoiceServiceStoreTests.swift
 git commit -m "fix: persist voice credentials in local app data"
 ```
 
