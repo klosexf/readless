@@ -101,7 +101,9 @@ final class DoubaoV3SpeechProvider: CloudAudioProviding {
         data: Data?
     ) -> ReadingError {
         if [401, 403, 408, 429, 504].contains(statusCode) {
-            return CloudSpeechErrorMapper.map(statusCode: statusCode)
+            return CloudSpeechErrorMapper.mapDoubaoV3HTTPStatus(
+                statusCode
+            )
         }
         if let data,
            case let .failure(serviceError) =
@@ -109,6 +111,8 @@ final class DoubaoV3SpeechProvider: CloudAudioProviding {
            serviceError != .voiceServiceResponseInvalid {
             return serviceError
         }
-        return CloudSpeechErrorMapper.map(statusCode: statusCode)
+        return CloudSpeechErrorMapper.mapDoubaoV3HTTPStatus(
+            statusCode
+        )
     }
 }
