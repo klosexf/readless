@@ -12,6 +12,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         AccessibilityPermissionController?
     private var voiceServiceSettings: VoiceServiceSettingsStore?
     private var credentialStore: LocalCredentialStore?
+    private var voiceServiceSaver: VoiceServiceSaveCoordinator?
     private var readingCoordinator: ReadingCoordinator?
     private var hotKeyController: GlobalHotKeyController?
     private var clipboardHotKeyController: GlobalHotKeyController?
@@ -29,6 +30,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             AccessibilityPermissionController()
         let voiceServiceSettings = VoiceServiceSettingsStore()
         let credentialStore = LocalCredentialStore()
+        let voiceServiceSaver = VoiceServiceSaveCoordinator(
+            settings: voiceServiceSettings,
+            credentials: credentialStore
+        )
         let speechEngine = CloudSpeechEngine(
             settings: voiceServiceSettings,
             credentials: credentialStore
@@ -58,6 +63,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.permissionController = permissionController
         self.voiceServiceSettings = voiceServiceSettings
         self.credentialStore = credentialStore
+        self.voiceServiceSaver = voiceServiceSaver
         readingCoordinator = coordinator
         self.hotKeyController = hotKeyController
         self.clipboardHotKeyController = clipboardHotKeyController
@@ -237,34 +243,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         configuration: VoiceServiceConfiguration,
         credential: String
     ) -> VoiceServiceSaveError? {
-        guard let voiceServiceSettings, let credentialStore else {
+        guard let voiceServiceSaver else {
             return .persistenceFailed
         }
 
-        let newCredential = credential.trimmingCharacters(
-            in: .whitespacesAndNewlines
-        )
-        if let validationError = configuration.validationError {
-            return .validation(validationError)
-        }
-
-        do {
-            if !newCredential.isEmpty {
-                if let error = VoiceServiceConfigurationValidator.saveError(
-                    for: configuration.provider,
-                    configuration: configuration,
-                    credential: newCredential
-                ) {
-                    return error
-                }
-                try credentialStore.saveCredential(
-                    newCredential,
-                    for: configuration.credentialSlot
-                )
-            }
-            try voiceServiceSettings.save(configuration: configuration)
-        } catch {
-            return .persistenceFailed
+        if let error = voiceServiceSaver.save(
+            configuration: configuration,
+            credential: credential
+        ) {
+            return error
         }
 
         if state.isOnboardingVisible,

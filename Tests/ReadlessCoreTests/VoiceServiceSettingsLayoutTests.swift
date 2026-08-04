@@ -118,6 +118,16 @@ final class VoiceServiceSettingsLayoutTests: XCTestCase {
         )
     }
 
+    func testRuntimeDelegatesVoiceServiceSavingToCoordinator() throws {
+        let source = try appDelegateSource()
+
+        XCTAssertTrue(source.contains("VoiceServiceSaveCoordinator("))
+        XCTAssertTrue(source.contains("voiceServiceSaver.save("))
+        XCTAssertFalse(
+            source.contains("try credentialStore.saveCredential(")
+        )
+    }
+
     private func mainWindowSource() throws -> String {
         try source(named: "readless/MainWindowView.swift")
     }

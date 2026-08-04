@@ -31,6 +31,13 @@ final class CloudSpeechRequestTests: XCTestCase {
         )
     }
 
+    func testDoubaoUnauthorizedResponseMapsToSpecificAPIKeyError() {
+        XCTAssertEqual(
+            CloudSpeechErrorMapper.mapDoubaoV3HTTPStatus(401),
+            .doubaoAPIKeyInvalid
+        )
+    }
+
     func testDoubaoV3RequestUsesHTTPHeadersAndJSONBody() throws {
         let requestID = try XCTUnwrap(
             UUID(uuidString: "11111111-2222-3333-4444-555555555555")
@@ -113,7 +120,7 @@ final class CloudSpeechRequestTests: XCTestCase {
 
         XCTAssertEqual(
             DoubaoV3HTTPResponseDecoder.decode(response),
-            .failure(.voiceServiceCredentialInvalid)
+            .failure(.doubaoAPIKeyInvalid)
         )
     }
 

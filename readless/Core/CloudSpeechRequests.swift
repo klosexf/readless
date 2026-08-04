@@ -198,6 +198,17 @@ enum CloudSpeechErrorMapper {
         }
     }
 
+    static func mapDoubaoV3HTTPStatus(
+        _ statusCode: Int
+    ) -> ReadingError {
+        switch statusCode {
+        case 401, 403:
+            .doubaoAPIKeyInvalid
+        default:
+            map(statusCode: statusCode)
+        }
+    }
+
     static func mapDoubaoMessage(_ message: String) -> ReadingError {
         let normalized = message.lowercased()
         if normalized.contains("quota") || normalized.contains("concurrency") {
@@ -206,7 +217,7 @@ enum CloudSpeechErrorMapper {
         if normalized.contains("auth")
             || normalized.contains("grant")
             || normalized.contains("api key") {
-            return .voiceServiceCredentialInvalid
+            return .doubaoAPIKeyInvalid
         }
         if normalized.contains("timeout") {
             return .voiceServiceTimedOut
@@ -230,7 +241,7 @@ enum CloudSpeechErrorMapper {
     ) -> ReadingError? {
         switch code {
         case 401, 403:
-            .voiceServiceCredentialInvalid
+            .doubaoAPIKeyInvalid
         case 408, 504:
             .voiceServiceTimedOut
         case 429:

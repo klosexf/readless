@@ -161,4 +161,11 @@ final class AppStateTests: XCTestCase {
             "快捷键已被占用，请设置新的快捷键。"
         )
     }
+
+    func testDoubaoAPIKeyErrorExplainsWhichCredentialToUse() {
+        XCTAssertEqual(
+            ReadingError.doubaoAPIKeyInvalid.userMessage,
+            "豆包 API Key 无效。请填写新版控制台“API Key 管理”中的 API Key，不要填写 Access Token。"
+        )
+    }
 }

@@ -47,6 +47,7 @@ let package = Package(
                 "AppState.swift",
                 "Core/ReadingModels.swift",
                 "Core/VoiceServiceModels.swift",
+                "Core/VoiceServiceSaveCoordinator.swift",
                 "Core/VoiceServiceStore.swift",
                 "Core/CloudSpeechRequests.swift",
                 "Core/TextSanitizer.swift",

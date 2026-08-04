@@ -21,7 +21,9 @@ final class DoubaoV3SpeechProviderSourceTests: XCTestCase {
 
         XCTAssertTrue(source.contains("error.code == .timedOut"))
         XCTAssertTrue(
-            source.contains("CloudSpeechErrorMapper.map(")
+            source.contains(
+                "CloudSpeechErrorMapper.mapDoubaoV3HTTPStatus("
+            )
         )
         XCTAssertTrue(source.contains("statusCode:"))
     }

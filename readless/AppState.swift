@@ -51,6 +51,8 @@ extension ReadingError {
             "连不上语音服务，请检查网络后重试。"
         case .voiceServiceCredentialInvalid:
             "语音服务凭证无效，请检查设置。"
+        case .doubaoAPIKeyInvalid:
+            "豆包 API Key 无效。请填写新版控制台“API Key 管理”中的 API Key，不要填写 Access Token。"
         case .voiceServiceQuotaExceeded:
             "语音服务额度已用尽，请在服务商控制台处理。"
         case .voiceServiceTimedOut:

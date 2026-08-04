@@ -15,6 +15,7 @@ enum ReadingError: String, Error, Equatable, Sendable {
     case voiceServiceNotConfigured
     case voiceServiceNetworkUnavailable
     case voiceServiceCredentialInvalid
+    case doubaoAPIKeyInvalid
     case voiceServiceQuotaExceeded
     case voiceServiceTimedOut
     case voiceServiceResponseInvalid

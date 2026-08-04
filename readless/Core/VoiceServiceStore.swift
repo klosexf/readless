@@ -13,6 +13,11 @@ protocol VoiceServiceConfigurationStoring {
 }
 
 @MainActor
+protocol VoiceServiceSettingsSaving: VoiceServiceConfigurationStoring {
+    func save(configuration: VoiceServiceConfiguration) throws
+}
+
+@MainActor
 protocol VoiceServiceCredentialChecking {
     func hasCredential(for slot: VoiceCredentialSlot) -> Bool
 }
