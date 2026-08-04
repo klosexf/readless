@@ -2,12 +2,28 @@ import Foundation
 import XCTest
 
 final class DoubaoV3SpeechProviderSourceTests: XCTestCase {
-    func testWebSocketUpgradeDoesNotIncludeSynthesisPacket() throws {
+    func testProviderUsesHTTPDataTaskAndResponseDecoder() throws {
         let source = try providerSource()
 
-        XCTAssertTrue(source.contains("var handshakeRequest = request"))
-        XCTAssertTrue(source.contains("handshakeRequest.httpBody = nil"))
-        XCTAssertTrue(source.contains("session.webSocketTask(with: handshakeRequest)"))
+        XCTAssertTrue(source.contains("URLSessionDataTask?"))
+        XCTAssertTrue(source.contains("session.dataTask(with: request)"))
+        XCTAssertTrue(source.contains("response as? HTTPURLResponse"))
+        XCTAssertTrue(
+            source.contains("DoubaoV3HTTPResponseDecoder.decode(data)")
+        )
+        XCTAssertFalse(source.contains("URLSessionWebSocketTask"))
+        XCTAssertFalse(source.contains("webSocketTask("))
+        XCTAssertFalse(source.contains("receiveNext()"))
+    }
+
+    func testProviderClassifiesHTTPAndTransportFailures() throws {
+        let source = try providerSource()
+
+        XCTAssertTrue(source.contains("error.code == .timedOut"))
+        XCTAssertTrue(
+            source.contains("CloudSpeechErrorMapper.map(")
+        )
+        XCTAssertTrue(source.contains("statusCode:"))
     }
 
     private func providerSource() throws -> String {
