@@ -11,7 +11,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var permissionController:
         AccessibilityPermissionController?
     private var voiceServiceSettings: VoiceServiceSettingsStore?
-    private var credentialStore: KeychainCredentialStore?
+    private var credentialStore: LocalCredentialStore?
     private var readingCoordinator: ReadingCoordinator?
     private var hotKeyController: GlobalHotKeyController?
     private var clipboardHotKeyController: GlobalHotKeyController?
@@ -28,7 +28,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let permissionController =
             AccessibilityPermissionController()
         let voiceServiceSettings = VoiceServiceSettingsStore()
-        let credentialStore = KeychainCredentialStore()
+        let credentialStore = LocalCredentialStore()
         let speechEngine = CloudSpeechEngine(
             settings: voiceServiceSettings,
             credentials: credentialStore

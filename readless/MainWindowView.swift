@@ -458,7 +458,7 @@ private struct VoiceServiceView: View {
             VStack(alignment: .leading, spacing: 5) {
                 Text("语音服务")
                     .font(.system(size: 25, weight: .semibold))
-                Text("仅豆包与 OpenAI-compatible 已接入；凭据只写入 macOS 钥匙串。")
+                Text("仅豆包与 OpenAI-compatible 已接入；凭据只保存在本机 Readless 应用数据中。")
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
             }
@@ -532,7 +532,7 @@ struct VoiceServiceEditor: View {
             }
 
             Label(
-                "不会经过 Readless 的服务器。发起朗读时，文字会直接发送给你配置的服务商；凭据不会显示或写入偏好设置。",
+                "不会经过 Readless 的服务器。文字会直接发送给你配置的服务商；凭据仅保存在这台 Mac 的 Readless 应用数据中。",
                 systemImage: "info.circle"
             )
             .font(.system(size: 10))
@@ -610,7 +610,7 @@ struct VoiceServiceEditor: View {
     private var credentialField: some View {
         serviceFormRow(credentialLabel) {
             SecureField(
-                hasSavedCredential ? "如需替换，请输入新的凭据" : "凭据保存在钥匙串",
+                hasSavedCredential ? "如需替换，请输入新的凭据" : "凭据仅保存在这台 Mac",
                 text: $credential
             )
             .textFieldStyle(.roundedBorder)
