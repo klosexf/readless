@@ -1,7 +1,7 @@
 import Foundation
 
 @MainActor
-final class VoiceServiceSettingsStore: VoiceServiceConfigurationStoring {
+final class VoiceServiceSettingsStore: VoiceServiceSettingsSaving {
     private enum Keys {
         static let configuration = "voice-service-configuration-v1"
         static let profiles = "voice-service-profiles-v2"
