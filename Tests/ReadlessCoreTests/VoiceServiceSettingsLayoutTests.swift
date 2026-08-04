@@ -1,5 +1,6 @@
 import Foundation
 import XCTest
+@testable import ReadlessCore
 
 final class VoiceServiceSettingsLayoutTests: XCTestCase {
     func testProviderCredentialsFollowTheirIdentifierField() throws {
@@ -68,7 +69,7 @@ final class VoiceServiceSettingsLayoutTests: XCTestCase {
         XCTAssertTrue(source.contains(".frame(maxWidth: .infinity)"))
     }
 
-    func testSavingConfigurationWithoutCredentialSkipsKeychainAccess() throws {
+    func testSavingConfigurationWithoutCredentialSkipsCredentialLookup() throws {
         let source = try appDelegateSource()
         let saveMethod = try XCTUnwrap(
             source.components(separatedBy: "private func saveVoiceService(")
@@ -80,11 +81,40 @@ final class VoiceServiceSettingsLayoutTests: XCTestCase {
         )
     }
 
-    func testCredentialSavedIndicatorChecksKeychainAfterSave() throws {
+    func testCredentialSavedIndicatorChecksStoreAfterSave() throws {
         let source = try mainWindowSource()
 
         XCTAssertTrue(
             source.contains("actions.hasVoiceServiceCredential(configuration.credentialSlot)")
+        )
+    }
+
+    func testRuntimeUsesLocalCredentialStoreWithoutKeychain() throws {
+        let source = try appDelegateSource()
+
+        XCTAssertTrue(
+            source.contains("private var credentialStore: LocalCredentialStore?")
+        )
+        XCTAssertTrue(source.contains("LocalCredentialStore()"))
+        XCTAssertFalse(source.contains("KeychainCredentialStore()"))
+    }
+
+    func testSettingsExplainsLocalCredentialStorage() throws {
+        let source = try mainWindowSource()
+
+        XCTAssertTrue(
+            source.contains(
+                "凭据仅保存在这台 Mac 的 Readless 应用数据中"
+            )
+        )
+        XCTAssertFalse(source.contains("macOS 钥匙串"))
+        XCTAssertFalse(source.contains("凭据保存在钥匙串"))
+    }
+
+    func testPersistenceFailureMessageIsStorageNeutral() {
+        XCTAssertEqual(
+            VoiceServiceSaveError.persistenceFailed.userMessage,
+            "无法保存语音服务设置，请重试。"
         )
     }
 

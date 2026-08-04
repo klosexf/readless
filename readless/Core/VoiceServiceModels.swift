@@ -57,7 +57,7 @@ enum VoiceServiceSaveError: Equatable, Sendable {
         case .credentialRequired:
             "请填写凭据。"
         case .persistenceFailed:
-            "无法保存凭据到 macOS 钥匙串，请重试。"
+            "无法保存语音服务设置，请重试。"
         }
     }
 }
