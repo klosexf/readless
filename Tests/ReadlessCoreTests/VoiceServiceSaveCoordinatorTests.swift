@@ -97,6 +97,42 @@ final class VoiceServiceSaveCoordinatorTests: XCTestCase {
             .persistenceFailed
         )
     }
+
+    func testSaveDoesNotMistakeOlderCredentialForReplacement() {
+        let settings = SaveSettingsFake(configuration: configuration)
+        let credentials = SaveCredentialsFake(
+            values: [.doubaoV3: "old-api-key"],
+            persistBeforeThrow: false,
+            throwsAfterSave: true
+        )
+        let saver = VoiceServiceSaveCoordinator(
+            settings: settings,
+            credentials: credentials
+        )
+
+        XCTAssertEqual(
+            saver.save(
+                configuration: configuration,
+                credential: "new-api-key"
+            ),
+            .persistenceFailed
+        )
+    }
+
+    func testSaveWithoutReplacementAcceptsExistingCredential() {
+        let settings = SaveSettingsFake(throwsAfterSave: true)
+        let credentials = SaveCredentialsFake(
+            values: [.doubaoV3: "existing-api-key"]
+        )
+        let saver = VoiceServiceSaveCoordinator(
+            settings: settings,
+            credentials: credentials
+        )
+
+        XCTAssertNil(
+            saver.save(configuration: configuration, credential: "")
+        )
+    }
 }
 
 private enum SaveFailure: Error {
@@ -141,14 +177,16 @@ private final class SaveSettingsFake: VoiceServiceSettingsSaving {
 
 @MainActor
 private final class SaveCredentialsFake: VoiceServiceCredentialStoring {
-    var values: [VoiceCredentialSlot: String] = [:]
+    var values: [VoiceCredentialSlot: String]
     private let persistBeforeThrow: Bool
     private let throwsAfterSave: Bool
 
     init(
+        values: [VoiceCredentialSlot: String] = [:],
         persistBeforeThrow: Bool = true,
         throwsAfterSave: Bool = false
     ) {
+        self.values = values
         self.persistBeforeThrow = persistBeforeThrow
         self.throwsAfterSave = throwsAfterSave
     }

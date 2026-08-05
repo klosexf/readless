@@ -41,18 +41,31 @@ final class VoiceServiceSaveCoordinator {
             try settings.save(configuration: configuration)
             return nil
         } catch {
-            return persistedStateMatches(configuration)
+            return persistedStateMatches(
+                configuration,
+                expectedCredential: newCredential.isEmpty
+                    ? nil
+                    : newCredential
+            )
                 ? nil
                 : .persistenceFailed
         }
     }
 
     private func persistedStateMatches(
-        _ configuration: VoiceServiceConfiguration
+        _ configuration: VoiceServiceConfiguration,
+        expectedCredential: String?
     ) -> Bool {
-        settings.configuration == configuration
-            && credentials.hasCredential(
+        guard settings.configuration == configuration else {
+            return false
+        }
+        if let expectedCredential {
+            return (try? credentials.credential(
                 for: configuration.credentialSlot
-            )
+            )) == expectedCredential
+        }
+        return credentials.hasCredential(
+            for: configuration.credentialSlot
+        )
     }
 }
