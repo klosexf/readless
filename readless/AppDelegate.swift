@@ -28,6 +28,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let permissionController =
             AccessibilityPermissionController()
+        let appState = state
         let voiceServiceSettings = VoiceServiceSettingsStore()
         let credentialStore = LocalCredentialStore()
         let voiceServiceSaver = VoiceServiceSaveCoordinator(
@@ -109,11 +110,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             selectDoubaoVersion: { version in
                 voiceServiceSettings.selectDoubaoVersion(version)
             },
-            saveVoiceService: { [weak self] configuration, credential in
-                self?.saveVoiceService(
+            saveVoiceService: { configuration, credential in
+                let result = voiceServiceSaver.save(
                     configuration: configuration,
                     credential: credential
-                ) ?? .persistenceFailed
+                )
+                if result == nil,
+                   appState.isOnboardingVisible,
+                   appState.onboardingStep == .configuration {
+                    appState.advanceOnboarding(after: .configurationSaved)
+                }
+                return result
             },
             readTestSpeech: {
                 coordinator.readTestSpeech()
@@ -237,28 +244,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 state.showFailure(.hotKeyConflict)
             }
         }
-    }
-
-    private func saveVoiceService(
-        configuration: VoiceServiceConfiguration,
-        credential: String
-    ) -> VoiceServiceSaveError? {
-        guard let voiceServiceSaver else {
-            return .persistenceFailed
-        }
-
-        if let error = voiceServiceSaver.save(
-            configuration: configuration,
-            credential: credential
-        ) {
-            return error
-        }
-
-        if state.isOnboardingVisible,
-           state.onboardingStep == .configuration {
-            state.advanceOnboarding(after: .configurationSaved)
-        }
-        return nil
     }
 
     private func confirmOnboardingAccessibility() -> Bool {

@@ -49,7 +49,7 @@ struct MiniPlayerView: View {
                             ? "play.fill"
                             : "pause.fill"
                     )
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: 14, weight: .semibold))
                     .frame(width: 32, height: 32)
                     .foregroundStyle(.white)
                     .background(.white.opacity(0.13))
@@ -66,10 +66,10 @@ struct MiniPlayerView: View {
                         Text(
                             "来自 \(state.sourceApplication ?? "未知应用")"
                         )
-                        .font(.system(size: 10, weight: .semibold))
+                        .font(.system(size: 12, weight: .semibold))
                         Spacer()
                         Text(state.playbackState.displayName)
-                            .font(.system(size: 8))
+                            .font(.system(size: 10))
                             .foregroundStyle(.secondary)
                     }
                     Slider(
@@ -99,6 +99,7 @@ struct MiniPlayerView: View {
                     Text("2.0×").tag("2.0×")
                     Text("3.0×").tag("3.0×")
                 }
+                .font(.system(size: 11))
                 .labelsHidden()
                 .frame(width: 64)
                 .onChange(of: speed) {
@@ -124,7 +125,7 @@ struct MiniPlayerView: View {
                 Divider().opacity(0.2)
                 HStack(alignment: .top, spacing: 12) {
                     Text(sentence)
-                        .font(.system(size: 10))
+                        .font(.system(size: 12))
                         .foregroundStyle(.white.opacity(0.86))
                         .lineLimit(2)
                         .frame(
@@ -139,7 +140,7 @@ struct MiniPlayerView: View {
                     )
                 }
                 .buttonStyle(.borderless)
-                .font(.system(size: 9))
+                .font(.system(size: 11))
             }
         }
     }
@@ -147,11 +148,11 @@ struct MiniPlayerView: View {
     private func errorContent(_ error: ReadingError) -> some View {
         HStack(spacing: 14) {
             Image(systemName: "exclamationmark.triangle.fill")
-                .font(.system(size: 14, weight: .semibold))
+                .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(.orange)
 
             Text(error.userMessage)
-                .font(.system(size: 12, weight: .semibold))
+                .font(.system(size: 13, weight: .semibold))
                 .lineSpacing(2)
                 .lineLimit(2)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -191,7 +192,7 @@ struct MiniPlayerView: View {
 
             Button(action: actions.dismissError) {
                 Image(systemName: "xmark")
-                    .font(.system(size: 12, weight: .medium))
+                    .font(.system(size: 14, weight: .medium))
                     .frame(width: 28, height: 28)
             }
             .buttonStyle(.plain)

@@ -72,12 +72,14 @@ final class LocalCredentialStore: VoiceServiceCredentialStoring {
                 withIntermediateDirectories: true,
                 attributes: [.posixPermissions: 0o700]
             )
-            try fileManager.setAttributes(
+            // 权限设置是尽力而为：即使当前进程因为文件所有者等原因
+            // 无法修改权限，也不应阻止凭据内容本身被写入。
+            try? fileManager.setAttributes(
                 [.posixPermissions: 0o700],
                 ofItemAtPath: directoryURL.path
             )
             try encoder.encode(values).write(to: fileURL, options: .atomic)
-            try fileManager.setAttributes(
+            try? fileManager.setAttributes(
                 [.posixPermissions: 0o600],
                 ofItemAtPath: fileURL.path
             )

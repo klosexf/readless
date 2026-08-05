@@ -22,17 +22,11 @@ struct MainWindowView: View {
         ) {
             VStack(alignment: .leading, spacing: 18) {
                 HStack(spacing: 10) {
-                    Image(systemName: "waveform")
-                        .font(.system(size: 15, weight: .semibold))
+                    Image("SidebarAppIcon")
+                        .resizable()
+                        .scaledToFit()
                         .frame(width: 32, height: 32)
-                        .foregroundStyle(.white)
-                        .background(Color.accentColor)
-                        .clipShape(
-                            RoundedRectangle(
-                                cornerRadius: 9,
-                                style: .continuous
-                            )
-                        )
+                        .accessibilityHidden(true)
 
                     VStack(alignment: .leading, spacing: 1) {
                         Text("听读助手")
@@ -706,7 +700,6 @@ struct VoiceServiceEditor: View {
         guard error == nil else {
             return
         }
-        credential = ""
         if actions.hasVoiceServiceCredential(configuration.credentialSlot) {
             savedCredentialSlots.insert(configuration.credentialSlot)
         } else {

@@ -4,23 +4,24 @@ import Carbon.HIToolbox
 final class GlobalHotKeyController {
     private static let signature: OSType = 0x52444C53
 
+    private static var registry: [UInt32: () -> Void] = [:]
+    private static var eventHandlerRef: EventHandlerRef?
+    private static var eventHandlerInstalled = false
+
     private let identifier: UInt32
     private var hotKeyRef: EventHotKeyRef?
-    private var eventHandlerRef: EventHandlerRef?
     private let action: () -> Void
 
     init(identifier: UInt32, action: @escaping () -> Void) {
         self.identifier = identifier
         self.action = action
-        installEventHandler()
+        Self.registry[identifier] = action
+        Self.installSharedEventHandler()
     }
 
     deinit {
         if let hotKeyRef {
             UnregisterEventHotKey(hotKeyRef)
-        }
-        if let eventHandlerRef {
-            RemoveEventHandler(eventHandlerRef)
         }
     }
 
@@ -54,29 +55,22 @@ final class GlobalHotKeyController {
         }
     }
 
-    private func installEventHandler() {
+    private static func installSharedEventHandler() {
+        guard !eventHandlerInstalled else { return }
+        eventHandlerInstalled = true
+
         var eventType = EventTypeSpec(
             eventClass: OSType(kEventClassKeyboard),
             eventKind: UInt32(kEventHotKeyPressed)
         )
         InstallEventHandler(
             GetApplicationEventTarget(),
-            Self.eventCallback,
+            sharedEventCallback,
             1,
             &eventType,
-            Unmanaged.passUnretained(self).toOpaque(),
+            nil,
             &eventHandlerRef
         )
-    }
-
-    private func handle(_ identifier: EventHotKeyID) {
-        guard
-            identifier.signature == Self.signature,
-            identifier.id == self.identifier
-        else {
-            return
-        }
-        action()
     }
 
     private func carbonModifiers(
@@ -98,9 +92,9 @@ final class GlobalHotKeyController {
         return result
     }
 
-    private nonisolated static let eventCallback:
-        EventHandlerUPP = { _, event, userData in
-            guard let event, let userData else {
+    private nonisolated static let sharedEventCallback:
+        EventHandlerUPP = { _, event, _ in
+            guard let event else {
                 return OSStatus(eventNotHandledErr)
             }
 
@@ -118,23 +112,11 @@ final class GlobalHotKeyController {
                 return status
             }
 
-            let controllerPointer = UInt(bitPattern: userData)
-            let signature = identifier.signature
             let id = identifier.id
             Task { @MainActor in
-                guard
-                    let pointer = UnsafeRawPointer(
-                        bitPattern: controllerPointer
-                    )
-                else {
-                    return
+                if let action = GlobalHotKeyController.registry[id] {
+                    action()
                 }
-                let controller = Unmanaged<GlobalHotKeyController>
-                    .fromOpaque(pointer)
-                    .takeUnretainedValue()
-                controller.handle(
-                    EventHotKeyID(signature: signature, id: id)
-                )
             }
             return noErr
         }
