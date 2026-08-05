@@ -128,6 +128,23 @@ final class VoiceServiceSettingsLayoutTests: XCTestCase {
         )
     }
 
+    func testEditorClearsStaleErrorBeforeSaving() throws {
+        let source = try mainWindowSource()
+        let saveSection = try XCTUnwrap(
+            source.components(separatedBy: "private func save()")
+                .dropFirst()
+                .first
+        )
+
+        try assertOrder(
+            in: saveSection,
+            snippets: [
+                "error = nil",
+                "error = actions.saveVoiceService(configuration, credential)"
+            ]
+        )
+    }
+
     private func mainWindowSource() throws -> String {
         try source(named: "readless/MainWindowView.swift")
     }

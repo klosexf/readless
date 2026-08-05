@@ -674,6 +674,7 @@ struct VoiceServiceEditor: View {
     }
 
     private func save() {
+        error = nil
         let configuration: VoiceServiceConfiguration
         switch provider {
         case .doubao:
