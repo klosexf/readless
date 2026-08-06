@@ -17,6 +17,7 @@ final class ReadingCoordinatorTests: XCTestCase {
         clipboardReader: clipboard,
         voiceServiceReadiness: readiness,
         sanitizer: DefaultTextSanitizer(),
+        sentenceLocator: DefaultSentenceLocator(),
         speech: speech,
         scheduleAfter: { [weak self] _, action in
             self?.scheduledAction = action
@@ -115,6 +116,29 @@ final class ReadingCoordinatorTests: XCTestCase {
         speech.emitProgress(0.42)
 
         XCTAssertEqual(state.progress, 0.42)
+    }
+
+    func testProgressUpdatesCurrentSentenceInExpandedPlayer() {
+        let multiSentence = SelectionSnapshot(
+            text: "第一句。第二句。第三句。",
+            sourceApplication: "Safari",
+            bundleIdentifier: "com.apple.Safari",
+            selectionIdentifier: "1:1"
+        )
+        selection.result = .success(multiSentence)
+        coordinator.handleReadShortcut()
+        speech.start()
+        state.setMiniPlayerExpanded(true)
+
+        XCTAssertEqual(state.currentSentence, "第一句。")
+
+        speech.emitProgress(0.5)
+
+        XCTAssertEqual(state.currentSentence, "第二句。")
+
+        speech.emitProgress(0.9)
+
+        XCTAssertEqual(state.currentSentence, "第三句。")
     }
 
     func testSeekingUpdatesPlayerAndSpeechEngineWhilePlaying() {

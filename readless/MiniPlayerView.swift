@@ -7,6 +7,7 @@ struct MiniPlayerView: View {
 
     @State private var speed = "1.0×"
     @State private var displayedProgress = 0.0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var errorSurfaceShape: RoundedRectangle {
         RoundedRectangle(cornerRadius: 18, style: .continuous)
@@ -125,6 +126,7 @@ struct MiniPlayerView: View {
                 Divider().opacity(0.2)
                 HStack(alignment: .top, spacing: 12) {
                     Text(sentence)
+                        .id(sentence)
                         .font(.system(size: 12))
                         .foregroundStyle(.white.opacity(0.86))
                         .lineLimit(2)
@@ -132,15 +134,25 @@ struct MiniPlayerView: View {
                             maxWidth: .infinity,
                             alignment: .leading
                         )
+                        .transition(.opacity)
 
-                    Button(
-                        "停止",
-                        role: .destructive,
-                        action: actions.stopPlayback
-                    )
+                    Button(action: actions.stopPlayback) {
+                        Text("停止")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                            .background(Color.red.opacity(0.8))
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
                 }
                 .buttonStyle(.borderless)
                 .font(.system(size: 11))
+                .animation(
+                    reduceMotion ? .none : .smooth,
+                    value: state.visibleCurrentSentence
+                )
             }
         }
     }

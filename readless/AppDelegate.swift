@@ -49,6 +49,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 credentials: credentialStore
             ),
             sanitizer: DefaultTextSanitizer(),
+            sentenceLocator: DefaultSentenceLocator(),
             speech: speechEngine
         )
         let hotKeyController = GlobalHotKeyController(identifier: 1) {

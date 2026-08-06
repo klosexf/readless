@@ -51,6 +51,7 @@ let package = Package(
                 "Core/VoiceServiceStore.swift",
                 "Core/CloudSpeechRequests.swift",
                 "Core/TextSanitizer.swift",
+                "Core/SentenceLocator.swift",
                 "Core/HotKeyConfiguration.swift",
                 "Core/ReadingCoordinator.swift",
                 "Core/RuntimeEnvironment.swift",

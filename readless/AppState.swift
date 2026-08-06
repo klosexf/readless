@@ -1,4 +1,5 @@
 import Combine
+import Foundation
 
 enum PlaybackState: String, CaseIterable, Equatable, Sendable {
     case idle
@@ -102,6 +103,7 @@ final class ReadlessAppState: ObservableObject {
     @Published var showsCurrentSentence = true
     @Published var sourceApplication: String?
     @Published var currentSentence: String?
+    var sentences: [SentenceRange] = []
     @Published var progress = 0.0
     @Published var materialMode: MaterialMode = .automatic
     @Published var readingError: ReadingError?
@@ -211,10 +213,25 @@ final class ReadlessAppState: ObservableObject {
         sentence: String
     ) {
         self.sourceApplication = sourceApplication
+        let range = NSRange(
+            location: 0,
+            length: sentence.utf16.count
+        )
+        sentences = [SentenceRange(text: sentence, range: range)]
         currentSentence = sentence
         readingError = nil
         playbackState = .playing
         progress = 0
+        isMiniPlayerVisible = true
+        isMiniPlayerExpanded = false
+    }
+
+    func beginPlayback(sourceApplication: String) {
+        self.sourceApplication = sourceApplication
+        readingError = nil
+        playbackState = .playing
+        progress = 0
+        updateCurrentSentence()
         isMiniPlayerVisible = true
         isMiniPlayerExpanded = false
     }
@@ -224,10 +241,29 @@ final class ReadlessAppState: ObservableObject {
         sentence: String
     ) {
         self.sourceApplication = sourceApplication
+        let range = NSRange(
+            location: 0,
+            length: sentence.utf16.count
+        )
+        sentences = [SentenceRange(text: sentence, range: range)]
         currentSentence = sentence
         readingError = nil
         playbackState = .preparing
         progress = 0
+        isMiniPlayerVisible = true
+        isMiniPlayerExpanded = false
+    }
+
+    func preparePlayback(
+        sourceApplication: String,
+        sentences: [SentenceRange]
+    ) {
+        self.sourceApplication = sourceApplication
+        self.sentences = sentences
+        readingError = nil
+        playbackState = .preparing
+        progress = 0
+        updateCurrentSentence()
         isMiniPlayerVisible = true
         isMiniPlayerExpanded = false
     }
@@ -256,6 +292,7 @@ final class ReadlessAppState: ObservableObject {
         readingError = nil
         playbackState = .completed
         progress = 1
+        updateCurrentSentence()
         isMiniPlayerVisible = true
     }
 
@@ -265,6 +302,7 @@ final class ReadlessAppState: ObservableObject {
         }
         playbackState = .playing
         self.progress = min(max(progress, 0), 1)
+        updateCurrentSentence()
         isMiniPlayerVisible = true
     }
 
@@ -273,6 +311,24 @@ final class ReadlessAppState: ObservableObject {
             return
         }
         self.progress = min(max(progress, 0), 1)
+        updateCurrentSentence()
+    }
+
+    private func updateCurrentSentence() {
+        guard !sentences.isEmpty else {
+            currentSentence = nil
+            return
+        }
+        let totalLength = sentences.last?.range.upperBound ?? 0
+        guard totalLength > 0 else {
+            currentSentence = sentences.first?.text
+            return
+        }
+        let clampedProgress = min(max(progress, 0), 1)
+        let targetOffset = Int(Double(totalLength) * clampedProgress)
+        currentSentence = sentences.first {
+            NSLocationInRange(targetOffset, $0.range)
+        }?.text ?? sentences.last?.text
     }
 
     func togglePlayback() {
@@ -298,5 +354,6 @@ final class ReadlessAppState: ObservableObject {
         isMiniPlayerExpanded = false
         sourceApplication = nil
         currentSentence = nil
+        sentences = []
     }
 }

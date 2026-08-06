@@ -63,6 +63,33 @@ final class AppStateTests: XCTestCase {
         XCTAssertEqual(state.playbackState, .playing)
     }
 
+    func testProgressSwitchesCurrentSentence() {
+        let state = ReadlessAppState()
+        let locator = DefaultSentenceLocator()
+        let sentences = locator.sentences(
+            in: "第一句。第二句。第三句。"
+        )
+        state.preparePlayback(
+            sourceApplication: "Safari",
+            sentences: sentences
+        )
+        state.beginPlayback(sourceApplication: "Safari")
+
+        XCTAssertEqual(state.currentSentence, "第一句。")
+
+        state.updateProgress(0.5)
+
+        XCTAssertEqual(state.currentSentence, "第二句。")
+
+        state.updateProgress(0.9)
+
+        XCTAssertEqual(state.currentSentence, "第三句。")
+
+        state.completePlayback()
+
+        XCTAssertEqual(state.currentSentence, "第三句。")
+    }
+
     func testCollapsedPlayerNeverExposesCurrentSentence() {
         let state = ReadlessAppState()
         state.beginPlayback(

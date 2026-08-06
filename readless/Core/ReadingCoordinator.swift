@@ -8,6 +8,7 @@ final class ReadingCoordinator {
     private let clipboardReader: ClipboardReading
     private let voiceServiceReadiness: VoiceServiceReadinessChecking
     private let sanitizer: TextSanitizing
+    private let sentenceLocator: SentenceLocating
     private let speech: SpeechEngine
     private let scheduleAfter: (
         TimeInterval,
@@ -24,6 +25,7 @@ final class ReadingCoordinator {
         clipboardReader: ClipboardReading,
         voiceServiceReadiness: VoiceServiceReadinessChecking,
         sanitizer: TextSanitizing,
+        sentenceLocator: SentenceLocating,
         speech: SpeechEngine,
         scheduleAfter: (
             (
@@ -38,6 +40,7 @@ final class ReadingCoordinator {
         self.clipboardReader = clipboardReader
         self.voiceServiceReadiness = voiceServiceReadiness
         self.sanitizer = sanitizer
+        self.sentenceLocator = sentenceLocator
         self.speech = speech
         self.scheduleAfter = scheduleAfter ?? { delay, action in
             Task { @MainActor in
@@ -203,9 +206,10 @@ final class ReadingCoordinator {
         activeSpeechSessionID += 1
         completionGeneration += 1
         lastFingerprint = fingerprint
+        let sentences = sentenceLocator.sentences(in: text)
         state.preparePlayback(
             sourceApplication: sourceApplication,
-            sentence: text
+            sentences: sentences
         )
         try speech.speak(text, sessionID: activeSpeechSessionID)
     }
@@ -214,17 +218,11 @@ final class ReadingCoordinator {
         guard sessionID == activeSpeechSessionID else {
             return
         }
-        guard
-            let source = state.sourceApplication,
-            let sentence = state.currentSentence
-        else {
+        guard let source = state.sourceApplication else {
             fail(.speechFailed)
             return
         }
-        state.beginPlayback(
-            sourceApplication: source,
-            sentence: sentence
-        )
+        state.beginPlayback(sourceApplication: source)
         switch state.onboardingStep {
         case .testSpeech:
             state.advanceOnboarding(after: .testSpeechSucceeded)
