@@ -71,13 +71,18 @@ final class VoiceServiceSettingsLayoutTests: XCTestCase {
 
     func testSavingConfigurationWithoutCredentialSkipsCredentialLookup() throws {
         let source = try appDelegateSource()
-        let saveMethod = try XCTUnwrap(
-            source.components(separatedBy: "private func saveVoiceService(")
+        let saveAction = try XCTUnwrap(
+            source.components(
+                separatedBy: "saveVoiceService: { configuration, credential in"
+            )
                 .dropFirst()
                 .first
+                .flatMap { $0.components(separatedBy: "readTestSpeech:").first }
         )
+
+        XCTAssertTrue(saveAction.contains("voiceServiceSaver.save("))
         XCTAssertFalse(
-            saveMethod.contains("credentialStore.credential(")
+            saveAction.contains("credentialStore.credential(")
         )
     }
 
