@@ -102,4 +102,53 @@ final class TextSanitizerTests: XCTestCase {
             "第一段\n\n第二段"
         )
     }
+
+    func testFormatsHTMLTableAsGenericRows() throws {
+        XCTAssertEqual(
+            try sanitizer.sanitize(
+                """
+                <table>
+                  <tr><th>字段甲</th><th>字段乙</th><th>字段丙</th></tr>
+                  <tr><td>数据甲</td><td>数据乙</td><td><strong>数据丙</strong></td></tr>
+                  <tr><td>数据丁</td><td>数据戊</td><td>数据己</td></tr>
+                </table>
+                """
+            ),
+            """
+            这是一个三列表格，共二行内容。
+            列标题依次是：字段甲、字段乙、字段丙。
+            第 1 行。
+            字段甲：数据甲。
+            字段乙：数据乙。
+            字段丙：数据丙。
+            第 2 行。
+            字段甲：数据丁。
+            字段乙：数据戊。
+            字段丙：数据己。
+            """
+        )
+    }
+
+    func testPreservesHTMLProseAroundTable() throws {
+        XCTAssertEqual(
+            try sanitizer.sanitize(
+                """
+                <p>前言内容。</p>
+                <table><tr><th>字段甲</th><th>字段乙</th></tr><tr><td>数据甲</td><td>数据乙</td></tr></table>
+                <p>结尾内容。</p>
+                """
+            ),
+            """
+            前言内容。
+
+            这是一个二列表格，共一行内容。
+            列标题依次是：字段甲、字段乙。
+            第 1 行。
+            字段甲：数据甲。
+            字段乙：数据乙。
+
+            结尾内容。
+            """
+        )
+    }
 }
