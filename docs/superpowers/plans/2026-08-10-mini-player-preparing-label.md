@@ -17,7 +17,7 @@
 - Modify: `readless/MiniPlayerView.swift:69-71`
 - Modify: `progress.md`
 
-- [ ] **Step 1: Write the failing source-level regression test**
+- [x] **Step 1: Write the failing source-level regression test**
 
 ```swift
 import Foundation
@@ -55,7 +55,7 @@ final class MiniPlayerViewSourceTests: XCTestCase {
 }
 ```
 
-- [ ] **Step 2: Run the focused test and confirm it fails for the current 10 pt font**
+- [x] **Step 2: Run the focused test and confirm it fails for the current 10 pt font**
 
 Run:
 
@@ -68,7 +68,7 @@ xcrun swift test --filter MiniPlayerViewSourceTests
 
 Expected: `testPlaybackStatusLabelUsesReadableSemiboldFont` fails because the status label currently has `.font(.system(size: 10))`.
 
-- [ ] **Step 3: Apply the minimum SwiftUI style change**
+- [x] **Step 3: Apply the minimum SwiftUI style change**
 
 Replace the status label modifier in `MiniPlayerView.swift`:
 
@@ -80,13 +80,13 @@ Text(state.playbackState.displayName)
 
 Do not change the label text, surrounding `HStack`, colours, opacity, `Slider`, actions, playback state, accessibility labels, or any other type.
 
-- [ ] **Step 4: Run the focused source test and confirm it passes**
+- [x] **Step 4: Run the focused source test and confirm it passes**
 
 Run the command from Step 2.
 
 Expected: the selected test suite completes with `0 failures`.
 
-- [ ] **Step 5: Run full validation**
+- [x] **Step 5: Run full validation**
 
 Run:
 
@@ -104,7 +104,7 @@ build CODE_SIGNING_ALLOWED=NO
 
 Expected: `swift test` completes with `0 failures`; the Xcode command ends with `BUILD SUCCEEDED`.
 
-- [ ] **Step 6: Record verification evidence and commit the scoped change**
+- [x] **Step 6: Record verification evidence and commit the scoped change**
 
 Append to `progress.md` the chosen 13 pt semibold value, changed files, exact verification commands and outcomes, plus the remaining user hand-test for the preparing state.
 

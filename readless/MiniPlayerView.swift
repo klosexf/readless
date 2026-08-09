@@ -70,7 +70,7 @@ struct MiniPlayerView: View {
                         .font(.system(size: 12, weight: .semibold))
                         Spacer()
                         Text(state.playbackState.displayName)
-                            .font(.system(size: 10))
+                            .font(.system(size: 13, weight: .semibold))
                             .foregroundStyle(.secondary)
                     }
                     Slider(
