@@ -75,22 +75,41 @@ struct DefaultTextSanitizer: TextSanitizing {
             let cleaned = cleanTableCell(value)
             return cleaned == "空白" ? "第 \(index + 1) 列" : cleaned
         }
-        let body = rows.dropFirst().enumerated().map { rowIndex, row in
-            let fields = zip(headings, row).map { heading, value in
-                "\(heading)：\(cleanTableCell(value))"
-            }
-            return "第 \(rowIndex + 1) 行。\(fields.joined(separator: "；"))。"
+        let body = rows.dropFirst()
+        var readingLines = [
+            "这是一个\(chineseCount(headings.count))列表格，共\(chineseCount(body.count))行内容。",
+            "列标题依次是：\(headings.joined(separator: "、"))。"
+        ]
+
+        for (rowIndex, row) in body.enumerated() {
+            readingLines.append("第 \(rowIndex + 1) 行。")
+            readingLines.append(
+                contentsOf: zip(headings, row).map { heading, value in
+                    "\(heading)：\(cleanTableCell(value))。"
+                }
+            )
         }
 
-        return ([
-            "这是一个 \(headings.count) 列、\(body.count) 行的表格。",
-            "列标题依次是：\(headings.joined(separator: "、"))。"
-        ] + body + ["表格朗读结束。"])
-            .joined(separator: "\n\n")
+        return readingLines.joined(separator: "\n")
     }
 
     private func cleanTableCell(_ value: String) -> String {
         (try? sanitizeProse(value)) ?? "空白"
+    }
+
+    private func chineseCount(_ value: Int) -> String {
+        let digits = ["零", "一", "二", "三", "四", "五", "六", "七", "八", "九"]
+        guard value < 100 else {
+            return String(value)
+        }
+        guard value >= 10 else {
+            return digits[value]
+        }
+
+        let tens = value / 10
+        let ones = value % 10
+        let tensText = tens == 1 ? "十" : "\(digits[tens])十"
+        return ones == 0 ? tensText : "\(tensText)\(digits[ones])"
     }
 
     private func cleanParagraph(_ paragraph: String) -> String {
