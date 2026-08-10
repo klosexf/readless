@@ -118,18 +118,31 @@ final class MenuBarController: NSObject, NSMenuDelegate {
             keyEquivalent: ""
         )
         let submenu = NSMenu()
-        [
-            "真正好的工具，应该在需要时出现…",
-            "产品的核心不在于功能数量…",
-            "Gatekeeper 对公开分发应用…"
-        ].forEach { title in
+        if state.recentReadings.isEmpty {
             let item = NSMenuItem(
-                title: title,
+                title: "暂无最近朗读",
                 action: nil,
                 keyEquivalent: ""
             )
             item.isEnabled = false
             submenu.addItem(item)
+        } else {
+            state.recentReadings.forEach { reading in
+                let singleLine = reading.text.replacingOccurrences(
+                    of: "\n",
+                    with: " "
+                )
+                let preview = singleLine.count > 44
+                    ? String(singleLine.prefix(44)) + "…"
+                    : singleLine
+                let item = NSMenuItem(
+                    title: preview,
+                    action: nil,
+                    keyEquivalent: ""
+                )
+                item.isEnabled = false
+                submenu.addItem(item)
+            }
         }
         submenu.addItem(.separator())
         submenu.addItem(

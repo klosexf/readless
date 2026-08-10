@@ -19,6 +19,7 @@ enum ReadingError: String, Error, Equatable, Sendable {
     case voiceServiceQuotaExceeded
     case voiceServiceTimedOut
     case voiceServiceResponseInvalid
+    case recentReadingsUnavailable
 }
 
 struct SelectionSnapshot: Equatable, Sendable {
@@ -32,6 +33,25 @@ struct SelectionFingerprint: Hashable, Sendable {
     let sanitizedText: String
     let bundleIdentifier: String
     let selectionIdentifier: String?
+}
+
+struct RecentReading: Codable, Equatable, Identifiable, Sendable {
+    let id: UUID
+    let text: String
+    let sourceApplication: String
+    let startedAt: Date
+
+    init(
+        id: UUID = UUID(),
+        text: String,
+        sourceApplication: String,
+        startedAt: Date
+    ) {
+        self.id = id
+        self.text = text
+        self.sourceApplication = sourceApplication
+        self.startedAt = startedAt
+    }
 }
 
 @MainActor
@@ -48,6 +68,12 @@ protocol SelectionReading {
 @MainActor
 protocol ClipboardReading {
     func readString() -> String?
+}
+
+@MainActor
+protocol RecentReadingStoring {
+    func load() throws -> [RecentReading]
+    func append(_ reading: RecentReading) throws -> [RecentReading]
 }
 
 protocol TextSanitizing {

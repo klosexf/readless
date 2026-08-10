@@ -195,4 +195,16 @@ final class AppStateTests: XCTestCase {
             "豆包 API Key 无效。请填写新版控制台“API Key 管理”中的 API Key，不要填写 Access Token。"
         )
     }
+
+    func testRecentReadingsViewUsesPublishedStateInsteadOfSamples() throws {
+        let sourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("readless/MainWindowView.swift")
+        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+
+        XCTAssertTrue(source.contains("RecentReadingsView(state: state)"))
+        XCTAssertFalse(source.contains("private let readings = ["))
+    }
 }

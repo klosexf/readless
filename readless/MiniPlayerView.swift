@@ -198,7 +198,8 @@ struct MiniPlayerView: View {
                  .doubaoAPIKeyInvalid,
                  .voiceServiceQuotaExceeded,
                  .voiceServiceTimedOut,
-                 .voiceServiceResponseInvalid:
+                 .voiceServiceResponseInvalid,
+                 .recentReadingsUnavailable:
                 EmptyView()
             }
 
