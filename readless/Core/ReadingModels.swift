@@ -19,6 +19,7 @@ enum ReadingError: String, Error, Equatable, Sendable {
     case voiceServiceQuotaExceeded
     case voiceServiceTimedOut
     case voiceServiceResponseInvalid
+    case recentReadingsUnavailable
 }
 
 struct SelectionSnapshot: Equatable, Sendable {

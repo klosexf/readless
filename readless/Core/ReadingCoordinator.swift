@@ -10,6 +10,8 @@ final class ReadingCoordinator {
     private let sanitizer: TextSanitizing
     private let sentenceLocator: SentenceLocating
     private let speech: SpeechEngine
+    private let history: RecentReadingStoring
+    private let now: () -> Date
     private let scheduleAfter: (
         TimeInterval,
         @escaping @MainActor () -> Void
@@ -17,6 +19,7 @@ final class ReadingCoordinator {
     private var lastFingerprint: SelectionFingerprint?
     private var completionGeneration = 0
     private var activeSpeechSessionID: SpeechSessionID = 0
+    private var activeRecentReadingCandidate: RecentReadingCandidate?
 
     init(
         state: ReadlessAppState,
@@ -27,6 +30,8 @@ final class ReadingCoordinator {
         sanitizer: TextSanitizing,
         sentenceLocator: SentenceLocating,
         speech: SpeechEngine,
+        history: RecentReadingStoring,
+        now: @escaping () -> Date = { .now },
         scheduleAfter: (
             (
                 TimeInterval,
@@ -42,6 +47,8 @@ final class ReadingCoordinator {
         self.sanitizer = sanitizer
         self.sentenceLocator = sentenceLocator
         self.speech = speech
+        self.history = history
+        self.now = now
         self.scheduleAfter = scheduleAfter ?? { delay, action in
             Task { @MainActor in
                 try? await Task.sleep(for: .seconds(delay))
@@ -103,9 +110,10 @@ final class ReadingCoordinator {
         do {
             let cleaned = try sanitizer.sanitize(text)
             try start(
-                text: cleaned,
-                sourceApplication: "剪贴板",
-                fingerprint: nil
+            text: cleaned,
+            sourceApplication: "剪贴板",
+            fingerprint: nil,
+            recordsInHistory: true
             )
         } catch let error as ReadingError {
             reportClipboardError(error)
@@ -122,9 +130,10 @@ final class ReadingCoordinator {
 
         do {
             try start(
-                text: "你好，这是桌面听读助手的内置测试语音。",
-                sourceApplication: "语音服务测试",
-                fingerprint: nil
+            text: "你好，这是桌面听读助手的内置测试语音。",
+            sourceApplication: "语音服务测试",
+            fingerprint: nil,
+            recordsInHistory: false
             )
         } catch let error as ReadingError {
             fail(error)
@@ -168,6 +177,7 @@ final class ReadingCoordinator {
         activeSpeechSessionID += 1
         completionGeneration += 1
         lastFingerprint = nil
+        activeRecentReadingCandidate = nil
         state.stopPlayback()
     }
 
@@ -191,14 +201,16 @@ final class ReadingCoordinator {
         try start(
             text: cleaned,
             sourceApplication: snapshot.sourceApplication,
-            fingerprint: fingerprint
+            fingerprint: fingerprint,
+            recordsInHistory: true
         )
     }
 
     private func start(
         text: String,
         sourceApplication: String,
-        fingerprint: SelectionFingerprint?
+        fingerprint: SelectionFingerprint?,
+        recordsInHistory: Bool
     ) throws {
         if state.playbackState != .idle {
             speech.stop()
@@ -206,12 +218,23 @@ final class ReadingCoordinator {
         activeSpeechSessionID += 1
         completionGeneration += 1
         lastFingerprint = fingerprint
+        activeRecentReadingCandidate = RecentReadingCandidate(
+            sessionID: activeSpeechSessionID,
+            text: text,
+            sourceApplication: sourceApplication,
+            recordsInHistory: recordsInHistory
+        )
         let sentences = sentenceLocator.sentences(in: text)
         state.preparePlayback(
             sourceApplication: sourceApplication,
             sentences: sentences
         )
-        try speech.speak(text, sessionID: activeSpeechSessionID)
+        do {
+            try speech.speak(text, sessionID: activeSpeechSessionID)
+        } catch {
+            activeRecentReadingCandidate = nil
+            throw error
+        }
     }
 
     private func didStart(sessionID: SpeechSessionID) {
@@ -223,6 +246,7 @@ final class ReadingCoordinator {
             return
         }
         state.beginPlayback(sourceApplication: source)
+        recordStartedReading(sessionID: sessionID)
         switch state.onboardingStep {
         case .testSpeech:
             state.advanceOnboarding(after: .testSpeechSucceeded)
@@ -294,4 +318,34 @@ final class ReadingCoordinator {
             .emptySelection
         ].contains(error)
     }
+
+    private func recordStartedReading(sessionID: SpeechSessionID) {
+        guard let candidate = activeRecentReadingCandidate,
+              candidate.sessionID == sessionID else {
+            return
+        }
+        activeRecentReadingCandidate = nil
+        guard candidate.recordsInHistory else {
+            return
+        }
+        do {
+            let readings = try history.append(
+                RecentReading(
+                    text: candidate.text,
+                    sourceApplication: candidate.sourceApplication,
+                    startedAt: now()
+                )
+            )
+            state.replaceRecentReadings(readings)
+        } catch {
+            state.showNonInterruptingError(.recentReadingsUnavailable)
+        }
+    }
+}
+
+private struct RecentReadingCandidate {
+    let sessionID: SpeechSessionID
+    let text: String
+    let sourceApplication: String
+    let recordsInHistory: Bool
 }

@@ -60,6 +60,8 @@ extension ReadingError {
             "语音服务响应超时，请重试。"
         case .voiceServiceResponseInvalid:
             "语音服务返回了无法播放的结果，请重试。"
+        case .recentReadingsUnavailable:
+            "最近朗读记录暂时无法保存，请稍后重试。"
         }
     }
 }
@@ -112,6 +114,7 @@ final class ReadlessAppState: ObservableObject {
     @Published var hotKeyIsRecording = false
     @Published var isOnboardingVisible = false
     @Published var onboardingStep: OnboardingStep = .configuration
+    @Published private(set) var recentReadings: [RecentReading] = []
 
     var visibleCurrentSentence: String? {
         guard isMiniPlayerExpanded, showsCurrentSentence else {
@@ -344,6 +347,10 @@ final class ReadlessAppState: ObservableObject {
 
     func setMiniPlayerExpanded(_ expanded: Bool) {
         isMiniPlayerExpanded = expanded
+    }
+
+    func replaceRecentReadings(_ readings: [RecentReading]) {
+        recentReadings = Array(readings.prefix(3))
     }
 
     func stopPlayback() {

@@ -9,6 +9,7 @@ final class ReadingCoordinatorTests: XCTestCase {
     private let clipboard = ClipboardReaderFake()
     private let speech = SpeechEngineFake()
     private let readiness = VoiceServiceReadinessFake()
+    private let history = RecentReadingStoreFake()
     private var scheduledAction: (@MainActor () -> Void)?
     private lazy var coordinator = ReadingCoordinator(
         state: state,
@@ -19,6 +20,8 @@ final class ReadingCoordinatorTests: XCTestCase {
         sanitizer: DefaultTextSanitizer(),
         sentenceLocator: DefaultSentenceLocator(),
         speech: speech,
+        history: history,
+        now: { Date(timeIntervalSince1970: 1_700_000_000) },
         scheduleAfter: { [weak self] _, action in
             self?.scheduledAction = action
         }
@@ -230,6 +233,46 @@ final class ReadingCoordinatorTests: XCTestCase {
         XCTAssertEqual(speech.spokenTexts, ["剪贴板文字"])
     }
 
+    func testStartedSelectionAddsRecentReading() {
+        selection.result = .success(firstSnapshot)
+
+        coordinator.handleReadShortcut()
+        speech.start()
+
+        XCTAssertEqual(history.readings.map(\.text), ["原文"])
+        XCTAssertEqual(history.readings.first?.sourceApplication, "Safari")
+        XCTAssertEqual(
+            history.readings.first?.startedAt,
+            Date(timeIntervalSince1970: 1_700_000_000)
+        )
+    }
+
+    func testStartedClipboardAddsRecentReading() {
+        clipboard.value = "剪贴板记录"
+
+        coordinator.readClipboard()
+        speech.start()
+
+        XCTAssertEqual(history.readings.map(\.text), ["剪贴板记录"])
+        XCTAssertEqual(history.readings.first?.sourceApplication, "剪贴板")
+    }
+
+    func testSpeechFailureBeforeStartDoesNotAddRecentReading() {
+        selection.result = .success(firstSnapshot)
+
+        coordinator.handleReadShortcut()
+        speech.fail(.speechFailed)
+
+        XCTAssertTrue(history.readings.isEmpty)
+    }
+
+    func testTestSpeechDoesNotAddRecentReading() {
+        coordinator.readTestSpeech()
+        speech.start()
+
+        XCTAssertTrue(history.readings.isEmpty)
+    }
+
     func testEmptyClipboardDoesNotReplaceActivePlayback() {
         selection.result = .success(firstSnapshot)
         coordinator.handleReadShortcut()
@@ -328,6 +371,23 @@ private final class ClipboardReaderFake: ClipboardReading {
     func readString() -> String? {
         readCount += 1
         return value
+    }
+}
+
+private final class RecentReadingStoreFake: RecentReadingStoring {
+    private(set) var readings: [RecentReading] = []
+    var appendError: Error?
+
+    func load() throws -> [RecentReading] {
+        readings
+    }
+
+    func append(_ reading: RecentReading) throws -> [RecentReading] {
+        if let appendError {
+            throw appendError
+        }
+        readings = Array(([reading] + readings).prefix(3))
+        return readings
     }
 }
 
