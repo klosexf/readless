@@ -331,7 +331,8 @@ private struct CurrentPlaybackView: View {
                      .doubaoAPIKeyInvalid,
                      .voiceServiceQuotaExceeded,
                      .voiceServiceTimedOut,
-                     .voiceServiceResponseInvalid:
+                     .voiceServiceResponseInvalid,
+                     .recentReadingsUnavailable:
                     EmptyView()
                 }
 
