@@ -34,6 +34,25 @@ struct SelectionFingerprint: Hashable, Sendable {
     let selectionIdentifier: String?
 }
 
+struct RecentReading: Codable, Equatable, Identifiable, Sendable {
+    let id: UUID
+    let text: String
+    let sourceApplication: String
+    let startedAt: Date
+
+    init(
+        id: UUID = UUID(),
+        text: String,
+        sourceApplication: String,
+        startedAt: Date
+    ) {
+        self.id = id
+        self.text = text
+        self.sourceApplication = sourceApplication
+        self.startedAt = startedAt
+    }
+}
+
 @MainActor
 protocol AccessibilityPermissionChecking {
     var isTrusted: Bool { get }
@@ -48,6 +67,12 @@ protocol SelectionReading {
 @MainActor
 protocol ClipboardReading {
     func readString() -> String?
+}
+
+@MainActor
+protocol RecentReadingStoring {
+    func load() throws -> [RecentReading]
+    func append(_ reading: RecentReading) throws -> [RecentReading]
 }
 
 protocol TextSanitizing {

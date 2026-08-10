@@ -89,4 +89,17 @@ final class LocalCredentialStoreTests: XCTestCase {
 
         XCTAssertThrowsError(try store.credential(for: .doubaoV3))
     }
+
+    func testRecentReadingRetainsFullTextSourceAndTimestamp() {
+        let time = Date(timeIntervalSince1970: 1_700_000_000)
+        let record = RecentReading(
+            text: "记录正文 A",
+            sourceApplication: "Safari",
+            startedAt: time
+        )
+
+        XCTAssertEqual(record.text, "记录正文 A")
+        XCTAssertEqual(record.sourceApplication, "Safari")
+        XCTAssertEqual(record.startedAt, time)
+    }
 }
