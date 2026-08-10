@@ -88,3 +88,73 @@ final class LocalCredentialStore: VoiceServiceCredentialStoring {
         }
     }
 }
+
+@MainActor
+final class LocalRecentReadingStore: RecentReadingStoring {
+    private let fileURL: URL
+    private let fileManager: FileManager
+    private let encoder = JSONEncoder()
+    private let decoder = JSONDecoder()
+
+    init(
+        fileURL: URL? = nil,
+        fileManager: FileManager = .default
+    ) {
+        self.fileManager = fileManager
+        let applicationSupport = fileManager.urls(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask
+        ).first ?? fileManager.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Application Support")
+        self.fileURL = fileURL ?? applicationSupport
+            .appendingPathComponent("Readless", isDirectory: true)
+            .appendingPathComponent("recent-readings-v1.json")
+    }
+
+    func load() throws -> [RecentReading] {
+        guard fileManager.fileExists(atPath: fileURL.path) else {
+            return []
+        }
+        do {
+            return try decoder.decode(
+                [RecentReading].self,
+                from: Data(contentsOf: fileURL)
+            )
+        } catch {
+            throw LocalCredentialStoreError.invalidFile
+        }
+    }
+
+    func append(_ reading: RecentReading) throws -> [RecentReading] {
+        let readings = ([reading] + (try load()))
+            .sorted { $0.startedAt > $1.startedAt }
+        let retained = Array(readings.prefix(3))
+        try persist(retained)
+        return retained
+    }
+
+    private func persist(_ readings: [RecentReading]) throws {
+        let directoryURL = fileURL.deletingLastPathComponent()
+        do {
+            try fileManager.createDirectory(
+                at: directoryURL,
+                withIntermediateDirectories: true,
+                attributes: [.posixPermissions: 0o700]
+            )
+            try? fileManager.setAttributes(
+                [.posixPermissions: 0o700],
+                ofItemAtPath: directoryURL.path
+            )
+            try encoder.encode(readings).write(
+                to: fileURL,
+                options: .atomic
+            )
+            try? fileManager.setAttributes(
+                [.posixPermissions: 0o600],
+                ofItemAtPath: fileURL.path
+            )
+        } catch {
+            throw LocalCredentialStoreError.persistenceFailed
+        }
+    }
+}
