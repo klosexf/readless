@@ -31,6 +31,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let appState = state
         let voiceServiceSettings = VoiceServiceSettingsStore()
         let credentialStore = LocalCredentialStore()
+        let recentReadingStore = LocalRecentReadingStore()
+        state.replaceRecentReadings(
+            (try? recentReadingStore.load()) ?? []
+        )
         let voiceServiceSaver = VoiceServiceSaveCoordinator(
             settings: voiceServiceSettings,
             credentials: credentialStore
@@ -50,7 +54,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             ),
             sanitizer: DefaultTextSanitizer(),
             sentenceLocator: DefaultSentenceLocator(),
-            speech: speechEngine
+            speech: speechEngine,
+            history: recentReadingStore
         )
         let hotKeyController = GlobalHotKeyController(identifier: 1) {
             coordinator.handleReadShortcut()

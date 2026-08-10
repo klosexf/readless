@@ -92,7 +92,7 @@ struct MainWindowView: View {
         case .voiceService:
             VoiceServiceView(actions: actions)
         case .recentReadings:
-            RecentReadingsView()
+            RecentReadingsView(state: state)
         }
     }
 }
@@ -739,55 +739,72 @@ struct VoiceServiceEditor: View {
 }
 
 private struct RecentReadingsView: View {
-    private let readings = [
-        ("真正好的工具，应该在需要时出现…", "Safari · 刚刚", "3:42"),
-        ("产品的核心不在于功能数量…", "备忘录 · 21:07", "5:08"),
-        ("Gatekeeper 对公开分发应用…", "预览 · 昨天", "2:16")
-    ]
+    @ObservedObject var state: ReadlessAppState
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             VStack(alignment: .leading, spacing: 5) {
                 Text("最近朗读")
                     .font(.system(size: 25, weight: .semibold))
-                Text("只保存摘要、来源与时间。")
+                Text("完整正文仅保存在这台 Mac 上，最多保留三条。")
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
             }
 
-            VStack(spacing: 8) {
-                ForEach(readings, id: \.0) { reading in
-                    HStack(spacing: 11) {
-                        Image(systemName: "text.quote")
-                            .foregroundStyle(Color.accentColor)
-                            .frame(width: 30, height: 30)
-                            .background(Color.accentColor.opacity(0.1))
+            if state.recentReadings.isEmpty {
+                VStack(spacing: 9) {
+                    Image(systemName: "clock.badge.questionmark")
+                        .font(.system(size: 22))
+                        .foregroundStyle(.secondary)
+                    Text("还没有最近朗读记录")
+                        .font(.system(size: 12, weight: .medium))
+                    Text("开始一次选区或剪贴板朗读后，记录会显示在这里。")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(28)
+                .cardStyle()
+            } else {
+                ScrollView {
+                    VStack(spacing: 8) {
+                        ForEach(state.recentReadings) { reading in
+                            HStack(alignment: .top, spacing: 11) {
+                                Image(systemName: "text.quote")
+                                    .foregroundStyle(Color.accentColor)
+                                    .frame(width: 30, height: 30)
+                                    .background(Color.accentColor.opacity(0.1))
+                                    .clipShape(
+                                        RoundedRectangle(
+                                            cornerRadius: 8,
+                                            style: .continuous
+                                        )
+                                    )
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(reading.text)
+                                        .font(.system(size: 11, weight: .medium))
+                                        .fixedSize(
+                                            horizontal: false,
+                                            vertical: true
+                                        )
+                                    Text(
+                                        "\(reading.sourceApplication) · \(reading.startedAt.formatted(date: .abbreviated, time: .shortened))"
+                                    )
+                                    .font(.system(size: 9))
+                                    .foregroundStyle(.secondary)
+                                }
+                                Spacer(minLength: 0)
+                            }
+                            .padding(10)
+                            .background(Color.white.opacity(0.66))
                             .clipShape(
                                 RoundedRectangle(
-                                    cornerRadius: 8,
+                                    cornerRadius: 10,
                                     style: .continuous
                                 )
                             )
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(reading.0)
-                                .font(.system(size: 10, weight: .medium))
-                            Text(reading.1)
-                                .font(.system(size: 8))
-                                .foregroundStyle(.secondary)
                         }
-                        Spacer()
-                        Text(reading.2)
-                            .font(.system(size: 9))
-                            .foregroundStyle(.secondary)
                     }
-                    .padding(10)
-                    .background(Color.white.opacity(0.66))
-                    .clipShape(
-                        RoundedRectangle(
-                            cornerRadius: 10,
-                            style: .continuous
-                        )
-                    )
                 }
             }
 
