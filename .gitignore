@@ -10,3 +10,6 @@ AGENTS.md
 progress.md
 .superpowers/
 worktrees/
+
+# Design source assets are local-only; the app ships icons via Assets.xcassets.
+design-assets/
