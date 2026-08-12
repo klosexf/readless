@@ -8,6 +8,7 @@ private final class MiniPlayerPanel: NSPanel {
 
 final class MiniPlayerPanelController: NSWindowController {
     private let state: ReadlessAppState
+    private var hasInitialPosition = false
 
     init(
         state: ReadlessAppState,
@@ -27,6 +28,7 @@ final class MiniPlayerPanelController: NSWindowController {
         panel.isOpaque = false
         panel.backgroundColor = .clear
         panel.hasShadow = true
+        panel.isMovableByWindowBackground = true
 
         super.init(window: panel)
         panel.contentViewController = NSHostingController(
@@ -74,17 +76,21 @@ final class MiniPlayerPanelController: NSWindowController {
                 ? 82
                 : (state.isMiniPlayerExpanded ? 126 : 52)
         )
-        let visibleFrame = panel.screen?.visibleFrame
-            ?? NSScreen.main?.visibleFrame
-            ?? .zero
-        let origin = NSPoint(
-            x: visibleFrame.midX - size.width / 2,
-            y: visibleFrame.minY + 24
-        )
-        panel.setFrame(
-            NSRect(origin: origin, size: size),
-            display: true,
-            animate: animated
-        )
+        let frame: NSRect
+        if hasInitialPosition {
+            frame = NSRect(origin: panel.frame.origin, size: size)
+        } else {
+            let visibleFrame = panel.screen?.visibleFrame
+                ?? NSScreen.main?.visibleFrame
+                ?? .zero
+            frame = NSRect(
+                x: visibleFrame.midX - size.width / 2,
+                y: visibleFrame.minY + 24,
+                width: size.width,
+                height: size.height
+            )
+            hasInitialPosition = true
+        }
+        panel.setFrame(frame, display: true, animate: animated)
     }
 }
