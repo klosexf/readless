@@ -474,6 +474,7 @@ private struct VoiceServiceView: View {
         .padding(26)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
+
 }
 
 struct VoiceServiceEditor: View {
@@ -741,6 +742,7 @@ struct VoiceServiceEditor: View {
 
 private struct RecentReadingsView: View {
     @ObservedObject var state: ReadlessAppState
+    @State private var expandedReadingIDs = Set<RecentReading.ID>()
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -770,6 +772,10 @@ private struct RecentReadingsView: View {
                 ScrollView {
                     VStack(spacing: 8) {
                         ForEach(state.recentReadings) { reading in
+                            let presentation = RecentReadingTextPresentation(
+                                text: reading.text
+                            )
+                            let isExpanded = expandedReadingIDs.contains(reading.id)
                             HStack(alignment: .top, spacing: 11) {
                                 Image(systemName: "text.quote")
                                     .foregroundStyle(Color.accentColor)
@@ -782,11 +788,32 @@ private struct RecentReadingsView: View {
                                         )
                                     )
                                 VStack(alignment: .leading, spacing: 4) {
-                                    Text(reading.text)
+                                    let displayText = inlineText(
+                                        for: presentation,
+                                        isExpanded: isExpanded
+                                    )
+                                    Text(displayText)
                                         .font(.system(size: 11, weight: .medium))
+                                        .tint(Color.accentColor)
                                         .fixedSize(
                                             horizontal: false,
                                             vertical: true
+                                        )
+                                        .environment(
+                                            \.openURL,
+                                            OpenURLAction { url in
+                                                guard url == Self.expansionLinkURL else {
+                                                    return .systemAction
+                                                }
+                                                withAnimation(.easeInOut(duration: 0.2)) {
+                                                    if isExpanded {
+                                                        expandedReadingIDs.remove(reading.id)
+                                                    } else {
+                                                        expandedReadingIDs.insert(reading.id)
+                                                    }
+                                                }
+                                                return .handled
+                                            }
                                         )
                                     Text(
                                         "\(reading.sourceApplication) · \(reading.startedAt.formatted(date: .abbreviated, time: .shortened))"
@@ -804,6 +831,10 @@ private struct RecentReadingsView: View {
                                     style: .continuous
                                 )
                             )
+                            .animation(
+                                .easeInOut(duration: 0.2),
+                                value: expandedReadingIDs.contains(reading.id)
+                            )
                         }
                     }
                 }
@@ -813,6 +844,26 @@ private struct RecentReadingsView: View {
         }
         .padding(26)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private static let expansionLinkURL = URL(string: "readless://recent-reading/expand")!
+
+    private func inlineText(
+        for presentation: RecentReadingTextPresentation,
+        isExpanded: Bool
+    ) -> AttributedString {
+        var inlineText = AttributedString(
+            isExpanded ? presentation.fullText : presentation.collapsedText
+        )
+        guard presentation.isCollapsible else {
+            return inlineText
+        }
+
+        inlineText.append(AttributedString(" "))
+        var actionText = AttributedString(isExpanded ? "收起" : "查看全部")
+        actionText.link = Self.expansionLinkURL
+        inlineText.append(actionText)
+        return inlineText
     }
 }
 

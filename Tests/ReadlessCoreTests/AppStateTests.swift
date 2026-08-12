@@ -207,4 +207,21 @@ final class AppStateTests: XCTestCase {
         XCTAssertTrue(source.contains("RecentReadingsView(state: state)"))
         XCTAssertFalse(source.contains("private let readings = ["))
     }
+
+    func testRecentReadingsViewProvidesTransientIndependentExpansionControls() throws {
+        let sourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("readless/MainWindowView.swift")
+        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+
+        XCTAssertTrue(source.contains("@State private var expandedReadingIDs"))
+        XCTAssertTrue(source.contains("RecentReadingTextPresentation("))
+        XCTAssertTrue(source.contains("text: reading.text"))
+        XCTAssertTrue(source.contains("let displayText = inlineText("))
+        XCTAssertTrue(source.contains("Text(displayText)"))
+        XCTAssertTrue(source.contains("OpenURLAction"))
+        XCTAssertTrue(source.contains("withAnimation(.easeInOut(duration: 0.2))"))
+    }
 }
