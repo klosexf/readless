@@ -54,6 +54,27 @@ struct RecentReading: Codable, Equatable, Identifiable, Sendable {
     }
 }
 
+struct RecentReadingTextPresentation: Equatable, Sendable {
+    static let collapsedCharacterLimit = 160
+
+    let fullText: String
+
+    init(text: String) {
+        fullText = text
+    }
+
+    var isCollapsible: Bool {
+        fullText.count > Self.collapsedCharacterLimit
+    }
+
+    var collapsedText: String {
+        guard isCollapsible else {
+            return fullText
+        }
+        return String(fullText.prefix(Self.collapsedCharacterLimit)) + "…"
+    }
+}
+
 @MainActor
 protocol AccessibilityPermissionChecking {
     var isTrusted: Bool { get }
