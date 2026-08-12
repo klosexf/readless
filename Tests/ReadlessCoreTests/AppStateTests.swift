@@ -219,7 +219,9 @@ final class AppStateTests: XCTestCase {
         XCTAssertTrue(source.contains("@State private var expandedReadingIDs"))
         XCTAssertTrue(source.contains("RecentReadingTextPresentation("))
         XCTAssertTrue(source.contains("text: reading.text"))
-        XCTAssertTrue(source.contains("Button(isExpanded ? \"收起\" : \"查看全部\")"))
+        XCTAssertTrue(source.contains("let displayText = inlineText("))
+        XCTAssertTrue(source.contains("Text(displayText)"))
+        XCTAssertTrue(source.contains("OpenURLAction"))
         XCTAssertTrue(source.contains("withAnimation(.easeInOut(duration: 0.2))"))
     }
 }

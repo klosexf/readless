@@ -474,6 +474,7 @@ private struct VoiceServiceView: View {
         .padding(26)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
+
 }
 
 struct VoiceServiceEditor: View {
@@ -787,31 +788,33 @@ private struct RecentReadingsView: View {
                                         )
                                     )
                                 VStack(alignment: .leading, spacing: 4) {
-                                    Text(
-                                        isExpanded
-                                            ? presentation.fullText
-                                            : presentation.collapsedText
+                                    let displayText = inlineText(
+                                        for: presentation,
+                                        isExpanded: isExpanded
                                     )
+                                    Text(displayText)
                                         .font(.system(size: 11, weight: .medium))
+                                        .tint(Color.accentColor)
                                         .fixedSize(
                                             horizontal: false,
                                             vertical: true
                                         )
-                                    if presentation.isCollapsible {
-                                        Button(isExpanded ? "收起" : "查看全部") {
-                                            withAnimation(.easeInOut(duration: 0.2)) {
-                                                if isExpanded {
-                                                    expandedReadingIDs.remove(reading.id)
-                                                } else {
-                                                    expandedReadingIDs.insert(reading.id)
+                                        .environment(
+                                            \.openURL,
+                                            OpenURLAction { url in
+                                                guard url == Self.expansionLinkURL else {
+                                                    return .systemAction
                                                 }
+                                                withAnimation(.easeInOut(duration: 0.2)) {
+                                                    if isExpanded {
+                                                        expandedReadingIDs.remove(reading.id)
+                                                    } else {
+                                                        expandedReadingIDs.insert(reading.id)
+                                                    }
+                                                }
+                                                return .handled
                                             }
-                                        }
-                                        .buttonStyle(.plain)
-                                        .font(.system(size: 11, weight: .semibold))
-                                        .foregroundStyle(Color.accentColor)
-                                        .padding(.top, 1)
-                                    }
+                                        )
                                     Text(
                                         "\(reading.sourceApplication) · \(reading.startedAt.formatted(date: .abbreviated, time: .shortened))"
                                     )
@@ -841,6 +844,26 @@ private struct RecentReadingsView: View {
         }
         .padding(26)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private static let expansionLinkURL = URL(string: "readless://recent-reading/expand")!
+
+    private func inlineText(
+        for presentation: RecentReadingTextPresentation,
+        isExpanded: Bool
+    ) -> AttributedString {
+        var inlineText = AttributedString(
+            isExpanded ? presentation.fullText : presentation.collapsedText
+        )
+        guard presentation.isCollapsible else {
+            return inlineText
+        }
+
+        inlineText.append(AttributedString(" "))
+        var actionText = AttributedString(isExpanded ? "收起" : "查看全部")
+        actionText.link = Self.expansionLinkURL
+        inlineText.append(actionText)
+        return inlineText
     }
 }
 
