@@ -19,30 +19,27 @@ final class AccessibilitySelectionReader: SelectionReading {
         }
 
         let focusedApp = AXUIElementCreateApplication(app.processIdentifier)
-        guard let focusedElement = elementValue(
+        let focusedElement = elementValue(
             kAXFocusedUIElementAttribute as CFString,
             from: focusedApp
-        ) else {
-            throw ReadingError.focusedElementUnavailable
-        }
+        )
 
         let result: SelectedTextResult
-        do {
-            result = try selectedText(
-                startingAt: focusedElement,
-                maximumParentDepth: 5
-            )
-        } catch {
-            guard let focusedWindow = elementValue(
-                kAXFocusedWindowAttribute as CFString,
-                from: focusedApp
-            ) else {
-                throw error
+        if let focusedElement {
+            do {
+                result = try selectedText(
+                    startingAt: focusedElement,
+                    maximumParentDepth: 5
+                )
+            } catch {
+                result = try selectedTextInFocusedWindow(
+                    from: focusedApp,
+                    fallbackError: error
+                )
             }
-            result = try selectedTextInSubtree(
-                rootedAt: focusedWindow,
-                maximumElementCount: 900,
-                maximumDepth: 18
+        } else {
+            result = try selectedTextInFocusedWindow(
+                from: focusedApp
             )
         }
         return SelectionSnapshot(
@@ -50,6 +47,23 @@ final class AccessibilitySelectionReader: SelectionReading {
             sourceApplication: app.localizedName ?? "未知应用",
             bundleIdentifier: app.bundleIdentifier ?? "unknown",
             selectionIdentifier: result.identifier
+        )
+    }
+
+    private func selectedTextInFocusedWindow(
+        from app: AXUIElement,
+        fallbackError: Error = ReadingError.focusedElementUnavailable
+    ) throws -> SelectedTextResult {
+        guard let focusedWindow = elementValue(
+            kAXFocusedWindowAttribute as CFString,
+            from: app
+        ) else {
+            throw fallbackError
+        }
+        return try selectedTextInSubtree(
+            rootedAt: focusedWindow,
+            maximumElementCount: 900,
+            maximumDepth: 18
         )
     }
 
@@ -119,8 +133,12 @@ final class AccessibilitySelectionReader: SelectionReading {
                 kAXChildrenAttribute as CFString,
                 from: queued.element
             )
+            let remainingCapacity = maximumElementCount - queue.count
+            guard remainingCapacity > 0 else {
+                continue
+            }
             queue.append(
-                contentsOf: children.map {
+                contentsOf: children.prefix(remainingCapacity).map {
                     QueuedElement(
                         element: $0,
                         depth: queued.depth + 1
