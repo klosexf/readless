@@ -13,3 +13,7 @@ worktrees/
 
 # Design source assets are local-only; the app ships icons via Assets.xcassets.
 design-assets/
+
+# AI 规划与设计过程文档，本地保留即可，无需提交到仓库。
+docs/superpowers/plans/
+docs/superpowers/specs/
