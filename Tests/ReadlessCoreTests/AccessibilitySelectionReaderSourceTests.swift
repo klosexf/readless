@@ -25,6 +25,61 @@ final class AccessibilitySelectionReaderSourceTests: XCTestCase {
         XCTAssertTrue(source.contains("children.prefix(remainingCapacity)"))
     }
 
+    func testReaderFallsBackToValueAndSelectedRange() throws {
+        let source = try readerSource()
+
+        XCTAssertTrue(
+            source.contains("private func selectedTextFromValueAndRange(")
+        )
+        XCTAssertTrue(source.contains("kAXValueAttribute"))
+        XCTAssertTrue(source.contains("selectedRange(from: element)"))
+        XCTAssertTrue(
+            source.contains(
+                "let valueAndRange = selectedTextFromValueAndRange"
+            )
+        )
+        XCTAssertTrue(
+            source.contains(
+                "hasSelectionSurface =\n            hasSelectionSurface\n            || valueAndRange.hasSelectionSurface"
+            )
+        )
+    }
+
+    func testReaderExtractsPlainTextFromStringAndAttributedString() throws {
+        let source = try readerSource()
+
+        XCTAssertTrue(source.contains("private func plainText("))
+        XCTAssertTrue(source.contains("value as? String"))
+        XCTAssertTrue(source.contains("value as? NSAttributedString"))
+        XCTAssertTrue(source.contains("attributed.string"))
+    }
+
+    func testReaderFallsBackToAttributedStringForMarkerRange() throws {
+        let source = try readerSource()
+
+        XCTAssertTrue(
+            source.contains("\"AXStringForTextMarkerRange\"")
+        )
+        XCTAssertTrue(
+            source.contains("\"AXAttributedStringForTextMarkerRange\"")
+        )
+        XCTAssertTrue(source.contains("plainText(from: attributedRaw)"))
+    }
+
+    func testReaderEnablesWebAccessibilityForChromium() throws {
+        let source = try readerSource()
+
+        XCTAssertTrue(
+            source.contains("private func enableWebAccessibilityIfNeeded(")
+        )
+        XCTAssertTrue(source.contains("enabledWebAccessibilityPIDs"))
+        XCTAssertTrue(source.contains("\"AXManualAccessibility\""))
+        XCTAssertTrue(source.contains("\"AXEnhancedUserInterface\""))
+        XCTAssertTrue(
+            source.contains("enableWebAccessibilityIfNeeded(\n            for: focusedApp")
+        )
+    }
+
     private func readerSource() throws -> String {
         let root = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()

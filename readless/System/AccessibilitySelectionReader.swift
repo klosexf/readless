@@ -13,12 +13,18 @@ final class AccessibilitySelectionReader: SelectionReading {
         let depth: Int
     }
 
+    private static var enabledWebAccessibilityPIDs: Set<pid_t> = []
+
     func readSelection() throws -> SelectionSnapshot {
         guard let app = NSWorkspace.shared.frontmostApplication else {
             throw ReadingError.focusedApplicationUnavailable
         }
 
         let focusedApp = AXUIElementCreateApplication(app.processIdentifier)
+        enableWebAccessibilityIfNeeded(
+            for: focusedApp,
+            pid: app.processIdentifier
+        )
         let focusedElement = elementValue(
             kAXFocusedUIElementAttribute as CFString,
             from: focusedApp
@@ -48,6 +54,39 @@ final class AccessibilitySelectionReader: SelectionReading {
             bundleIdentifier: app.bundleIdentifier ?? "unknown",
             selectionIdentifier: result.identifier
         )
+    }
+
+    private func enableWebAccessibilityIfNeeded(
+        for app: AXUIElement,
+        pid: pid_t
+    ) {
+        guard !Self.enabledWebAccessibilityPIDs.contains(pid) else {
+            return
+        }
+        Self.enabledWebAccessibilityPIDs.insert(pid)
+
+        let manual = "AXManualAccessibility" as CFString
+        let enhanced = "AXEnhancedUserInterface" as CFString
+
+        var enabled = AXUIElementSetAttributeValue(
+            app,
+            manual,
+            kCFBooleanTrue
+        ) == .success
+        if !enabled {
+            enabled = AXUIElementSetAttributeValue(
+                app,
+                enhanced,
+                kCFBooleanTrue
+            ) == .success
+        }
+
+        guard enabled else {
+            return
+        }
+
+        // 让 Chromium/Electron 异步构建网页内容 AX 树后再读取
+        RunLoop.current.run(until: Date().addingTimeInterval(0.4))
     }
 
     private func selectedTextInFocusedWindow(
@@ -165,7 +204,7 @@ final class AccessibilitySelectionReader: SelectionReading {
             from: element
         ) {
             hasSelectionSurface = true
-            if let text = nonEmptyString(rawText) {
+            if let text = plainText(from: rawText) {
                 return (
                     SelectedTextResult(
                         text: text,
@@ -198,6 +237,24 @@ final class AccessibilitySelectionReader: SelectionReading {
             }
         }
 
+        let valueAndRange = selectedTextFromValueAndRange(
+            from: element
+        )
+        hasSelectionSurface =
+            hasSelectionSurface
+            || valueAndRange.hasSelectionSurface
+        if let text = valueAndRange.text {
+            return (
+                SelectedTextResult(
+                    text: text,
+                    identifier: diagnosticIdentifier(
+                        for: element
+                    )
+                ),
+                true
+            )
+        }
+
         return (nil, hasSelectionSurface)
     }
 
@@ -211,26 +268,82 @@ final class AccessibilitySelectionReader: SelectionReading {
             return nil
         }
 
-        let rawText = parameterizedValue(
+        let stringRaw = parameterizedValue(
             "AXStringForTextMarkerRange" as CFString,
             parameter: markerRange,
             from: element
         )
-        return nonEmptyString(rawText)
+        if let text = plainText(from: stringRaw) {
+            return text
+        }
+
+        let attributedRaw = parameterizedValue(
+            "AXAttributedStringForTextMarkerRange" as CFString,
+            parameter: markerRange,
+            from: element
+        )
+        return plainText(from: attributedRaw)
+    }
+
+    private func selectedTextFromValueAndRange(
+        from element: AXUIElement
+    ) -> (text: String?, hasSelectionSurface: Bool) {
+        guard value(
+            kAXValueAttribute as CFString,
+            from: element
+        ) != nil else {
+            return (nil, false)
+        }
+
+        guard let range = selectedRange(from: element),
+              range.length > 0 else {
+            return (nil, true)
+        }
+
+        guard let fullText = plainText(
+            from: value(kAXValueAttribute as CFString, from: element)
+        ) else {
+            return (nil, true)
+        }
+
+        let nsValue = fullText as NSString
+        let safeLocation = max(0, range.location)
+        let safeLength = max(
+            0,
+            min(range.length, nsValue.length - safeLocation)
+        )
+        guard safeLength > 0 else {
+            return (nil, true)
+        }
+
+        let substring = nsValue.substring(
+            with: NSRange(location: safeLocation, length: safeLength)
+        )
+        return (nonEmptyString(substring), true)
     }
 
     private func nonEmptyString(
-        _ value: CFTypeRef?
+        _ text: String
     ) -> String? {
-        guard
-            let text = value as? String,
-            !text.trimmingCharacters(
-                in: CharacterSet.whitespacesAndNewlines
-            ).isEmpty
-        else {
+        let trimmed = text.trimmingCharacters(
+            in: CharacterSet.whitespacesAndNewlines
+        )
+        return trimmed.isEmpty ? nil : text
+    }
+
+    private func plainText(
+        from value: CFTypeRef?
+    ) -> String? {
+        guard let value else {
             return nil
         }
-        return text
+        if let text = value as? String {
+            return nonEmptyString(text)
+        }
+        if let attributed = value as? NSAttributedString {
+            return nonEmptyString(attributed.string)
+        }
+        return nil
     }
 
     private func diagnosticIdentifier(
