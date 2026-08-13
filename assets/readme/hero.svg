@@ -1,0 +1,210 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="1200" height="400" viewBox="0 0 1200 400"
+     role="img" aria-labelledby="heroTitle heroDesc">
+  <title id="heroTitle">readless - macOS 菜单栏听读助手</title>
+  <desc id="heroDesc">readless 是一个 macOS 菜单栏听读助手：选中文字后按一次快捷键，即可像听播客一样顺畅读完一篇文章。右侧展示真实迷你播放器界面。</desc>
+
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0D1220"/>
+      <stop offset="100%" stop-color="#0B0F1A"/>
+    </linearGradient>
+    <!-- Source app window gradient (light, like prototype) -->
+    <linearGradient id="appBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#F2F4F8"/>
+      <stop offset="100%" stop-color="#E4E8EE"/>
+    </linearGradient>
+    <linearGradient id="appTitlebar" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F5F6F8"/>
+      <stop offset="100%" stop-color="#EBEDEF"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="400" rx="24" fill="url(#bgGrad)"/>
+
+  <!-- ============ LEFT: Title block ============ -->
+  <g id="title-block" transform="translate(64 52)">
+    <!-- Category eyebrow -->
+    <g transform="translate(0 0)">
+      <rect x="0" y="0" width="210" height="28" rx="14" fill="#0A84FF" opacity="0.15"/>
+      <circle cx="16" cy="14" r="4" fill="#0A84FF"/>
+      <text x="30" y="19" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif"
+            font-size="14" font-weight="600" fill="#0A84FF" letter-spacing="0.3">
+        macOS 菜单栏听读助手
+      </text>
+    </g>
+
+    <!-- Project name -->
+    <text x="0" y="92" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif"
+          font-size="64" font-weight="700" fill="#ECEFF4" letter-spacing="-1.5">
+      readless
+    </text>
+
+    <!-- Description -->
+    <text x="0" y="142" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif"
+          font-size="22" font-weight="400" fill="#9BA3B4">
+      选中文字，按一次快捷键，
+    </text>
+    <text x="0" y="174" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif"
+          font-size="22" font-weight="400" fill="#9BA3B4">
+      像听播客一样读完一篇文章。
+    </text>
+
+    <!-- Metadata pills -->
+    <g transform="translate(0 214)">
+      <g>
+        <rect x="0" y="0" width="104" height="30" rx="8" fill="#161B2C" stroke="#2A3045" stroke-width="1"/>
+        <text x="52" y="20" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+              font-size="13" font-weight="500" fill="#9BA3B4" text-anchor="middle">macOS 15+</text>
+      </g>
+      <g transform="translate(116 0)">
+        <rect x="0" y="0" width="78" height="30" rx="8" fill="#161B2C" stroke="#2A3045" stroke-width="1"/>
+        <text x="39" y="20" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+              font-size="13" font-weight="500" fill="#9BA3B4" text-anchor="middle">Swift</text>
+      </g>
+      <g transform="translate(206 0)">
+        <rect x="0" y="0" width="90" height="30" rx="8" fill="#161B2C" stroke="#2A3045" stroke-width="1"/>
+        <text x="45" y="20" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif"
+              font-size="13" font-weight="500" fill="#9BA3B4" text-anchor="middle">开源</text>
+      </g>
+      <g transform="translate(308 0)">
+        <rect x="0" y="0" width="120" height="30" rx="8" fill="#161B2C" stroke="#2A3045" stroke-width="1"/>
+        <text x="60" y="20" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif"
+              font-size="13" font-weight="500" fill="#9BA3B4" text-anchor="middle">BYOK 语音</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- ============ RIGHT: Source app window + mini player ============ -->
+  <!-- Source app window (simplified, like prototype) -->
+  <g id="source-app" transform="translate(680 40)">
+    <!-- App window background -->
+    <rect x="0" y="0" width="470" height="320" rx="16" fill="url(#appBg)" stroke="rgba(255,255,255,0.85)" stroke-width="1"/>
+
+    <!-- Titlebar -->
+    <rect x="0" y="0" width="470" height="38" rx="16" fill="url(#appTitlebar)"/>
+    <rect x="0" y="22" width="470" height="16" fill="url(#appTitlebar)"/>
+    <!-- Traffic lights -->
+    <circle cx="18" cy="19" r="6" fill="#FF5F57"/>
+    <circle cx="38" cy="19" r="6" fill="#FEBC2E"/>
+    <circle cx="58" cy="19" r="6" fill="#28C840"/>
+    <!-- Address bar -->
+    <rect x="120" y="10" width="230" height="20" rx="6" fill="rgba(228,230,234,0.72)"/>
+    <text x="235" y="24" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+          font-size="10" fill="#62666D" text-anchor="middle">productnotes.example / focus</text>
+
+    <!-- Sidebar -->
+    <rect x="0" y="38" width="120" height="282" fill="rgba(246,247,249,0.78)"/>
+    <line x1="120" y1="38" x2="120" y2="320" stroke="rgba(28,31,38,0.08)" stroke-width="1"/>
+    <text x="20" y="62" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif"
+          font-size="11" font-weight="600" fill="#1D1D1F">阅读列表</text>
+    <rect x="20" y="76" width="70" height="6" rx="3" fill="#DCDEE3"/>
+    <rect x="20" y="92" width="80" height="6" rx="3" fill="#DCDEE3"/>
+    <rect x="20" y="108" width="60" height="6" rx="3" fill="#DCDEE3"/>
+    <rect x="20" y="124" width="74" height="6" rx="3" fill="#DCDEE3"/>
+
+    <!-- Content area -->
+    <text x="148" y="68" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+          font-size="9" font-weight="700" fill="#0A84FF" letter-spacing="0.08em">DESIGNING FOR FOCUS</text>
+    <text x="148" y="94" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif"
+          font-size="17" font-weight="680" fill="#1D1D1F" letter-spacing="-0.02em">真正好的工具，应该在需要时出现。</text>
+
+    <text x="148" y="124" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif"
+          font-size="11" fill="#4F535A">我们每天都在不同的应用之间移动，注意力也随之被</text>
+    <text x="148" y="142" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif"
+          font-size="11" fill="#4F535A">切成越来越细的片段。</text>
+
+    <!-- Selected text (blue highlight) -->
+    <rect x="144" y="154" width="298" height="20" rx="3" fill="rgba(10,132,255,0.18)"/>
+    <text x="148" y="169" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif"
+          font-size="11" fill="#153B62">注意力不是无限资源。减少一次上下文切换…</text>
+
+    <text x="148" y="196" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif"
+          font-size="11" fill="#4F535A">当工具完成任务后，它应该安静离开，把屏幕和</text>
+    <text x="148" y="214" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif"
+          font-size="11" fill="#4F535A">思考重新还给用户。</text>
+
+    <!-- Focus note -->
+    <g transform="translate(310 276)">
+      <rect x="0" y="0" width="140" height="24" rx="8" fill="rgba(237,248,242,0.82)" stroke="rgba(47,158,103,0.15)" stroke-width="1"/>
+      <circle cx="12" cy="12" r="3" fill="#2F9E67"/>
+      <text x="20" y="16" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif"
+            font-size="9" fill="#315B46">Safari 仍在前台 · 焦点未打断</text>
+    </g>
+  </g>
+
+  <!-- ============ Mini player (matches real app screenshot) ============ -->
+  <g id="mini-player" transform="translate(570 256)">
+    <!-- Player background: gray translucent bar -->
+    <rect x="0" y="0" width="620" height="124" rx="22" fill="#6B6D74" opacity="0.96"
+          stroke="rgba(255,255,255,0.22)" stroke-width="1"/>
+    <!-- Subtle inner highlight -->
+    <rect x="1" y="1" width="618" height="40" rx="21" fill="rgba(255,255,255,0.06)"/>
+
+    <!-- Row 1: Controls -->
+    <g transform="translate(24 18)">
+      <!-- Round gray pause button -->
+      <circle cx="18" cy="18" r="18" fill="rgba(255,255,255,0.22)"/>
+      <!-- Pause icon "Ⅱ" -->
+      <rect x="12" y="11" width="3.5" height="14" rx="1" fill="#FFFFFF"/>
+      <rect x="20" y="11" width="3.5" height="14" rx="1" fill="#FFFFFF"/>
+
+      <!-- Progress wrap -->
+      <g transform="translate(52 6)">
+        <!-- Meta row: source + status -->
+        <text x="0" y="10" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif"
+              font-size="15" font-weight="600" fill="#FFFFFF">来自 Safari</text>
+        <text x="414" y="10" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif"
+              font-size="14" font-weight="500" fill="rgba(255,255,255,0.58)" text-anchor="end">正在朗读</text>
+
+        <!-- Progress bar track -->
+        <rect x="0" y="22" width="414" height="5" rx="2.5" fill="rgba(0,0,0,0.22)"/>
+        <!-- Progress bar played -->
+        <rect x="0" y="22" width="58" height="5" rx="2.5" fill="#FFFFFF"/>
+        <!-- Progress knob -->
+        <circle cx="58" cy="24.5" r="7" fill="#FFFFFF"/>
+      </g>
+
+      <!-- Speed selector with up/down arrows -->
+      <g transform="translate(478 4)">
+        <rect x="0" y="0" width="74" height="28" rx="8" fill="rgba(0,0,0,0.32)"/>
+        <text x="22" y="19" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+              font-size="13" font-weight="600" fill="#FFFFFF" text-anchor="middle">1.0×</text>
+        <!-- Up/down arrows icon -->
+        <path d="M48 10 L52 6 L56 10 M48 18 L52 22 L56 18" fill="none" stroke="#FFFFFF"
+              stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+
+      <!-- Expand chevron -->
+      <g transform="translate(566 8)">
+        <rect x="0" y="0" width="30" height="24" rx="6" fill="rgba(255,255,255,0.12)"/>
+        <path d="M11 10 L15 14 L19 10" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+    </g>
+
+    <!-- Divider -->
+    <line x1="24" y1="60" x2="596" y2="60" stroke="rgba(255,255,255,0.14)" stroke-width="1"/>
+
+    <!-- Row 2: Current sentence + stop button -->
+    <g transform="translate(24 72)">
+      <!-- Current sentence text -->
+      <text x="0" y="18" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif"
+            font-size="14" fill="rgba(255,255,255,0.92)">真正好的工具，应该在需要时出现，在不需要时安静地退到…</text>
+
+      <!-- Stop button -->
+      <g transform="translate(520 0)">
+        <rect x="0" y="0" width="76" height="28" rx="14" fill="#D74444"/>
+        <text x="38" y="19" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif"
+              font-size="13" font-weight="600" fill="#FFFFFF" text-anchor="middle">停止</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- Menu bar icon hint (top-right corner of source app area) -->
+  <g transform="translate(1100 52)">
+    <rect x="0" y="0" width="28" height="20" rx="5" fill="rgba(255,255,255,0.54)"/>
+    <text x="14" y="14" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+          font-size="12" font-weight="700" fill="#1D1D1F" text-anchor="middle">♪</text>
+  </g>
+</svg>
