@@ -2,6 +2,10 @@
   <img src="./assets/readme/hero.svg" width="100%" alt="readless - macOS 菜单栏听读助手，选中文字按一次快捷键即可像听播客一样读完一篇文章">
 </p>
 
+<p align="center">
+  中文 | <a href="./README_EN.md">English</a>
+</p>
+
 ---
 
 readless 是一个原生 macOS 菜单栏听读助手。在任意应用中选中文字，按一次快捷键，即可在 1.5 秒内听到经过清洗、可控速、可跨应用连续播放的语音朗读。
